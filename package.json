@@ -1,0 +1,9 @@
+{
+    "name": "multiplayer-td-root",
+    "version": "1.0.0",
+    "scripts": {
+        "dev": "cd client && npm run dev",
+        "server": "cd server && npm start",
+        "install-all": "cd client && npm install && cd ../server && npm install"
+    }
+}

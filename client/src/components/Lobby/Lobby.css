@@ -1,0 +1,389 @@
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+.lobby-container,
+.active-room-container {
+    min-height: 100vh;
+    background-color: #0b1a0b;
+    background-image:
+        linear-gradient(rgba(0, 0, 0, 0.5) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.5) 1px, transparent 1px),
+        linear-gradient(to bottom, #1d3a1a, #0b1a0b);
+    background-size: 40px 40px, 40px 40px, 100% 100%;
+    color: #e0e0e0;
+    padding: 1rem;
+    /* Reduced from 2rem */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: 'VT323', monospace;
+    position: relative;
+    image-rendering: pixelated;
+}
+
+/* Zelda Stone Panel Style */
+.panel-zelda {
+    background: #3a3a3a;
+    border: 4px solid #000;
+    /* Reduced from 6px */
+    box-shadow:
+        inset 3px 3px 0px #6a6a6a,
+        inset -3px -3px 0px #1a1a1a,
+        6px 6px 0px rgba(0, 0, 0, 0.5);
+    padding: 1.2rem;
+    /* Reduced from 2rem */
+    position: relative;
+    width: 100%;
+}
+
+.lobby-header,
+.active-room-header {
+    width: 100%;
+    max-width: 80rem;
+    /* Reduced from 90rem */
+    margin-bottom: 1.5rem;
+    /* Reduced from 2rem */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 4px solid #2e1a0a;
+    /* Reduced from 6px */
+    padding-bottom: 1rem;
+    /* Reduced from 1.5rem */
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    /* Reduced from 1.5rem */
+}
+
+.logo-container svg {
+    width: 48px !important;
+    /* Force smaller icon */
+    height: 48px !important;
+}
+
+.lobby-title {
+    font-size: 2rem;
+    /* Reduced from 2.5rem */
+    font-weight: normal;
+    color: #ffd700;
+    text-shadow:
+        2px 2px 0 #b8860b,
+        -1px -1px 0 #000,
+        1px -1px 0 #000,
+        -1px 1px 0 #000,
+        0 2px 0 #000;
+    letter-spacing: 1px;
+}
+
+.lobby-subtitle {
+    color: #ffd700;
+    font-size: 1.2rem;
+    /* Reduced from 1.5rem */
+    letter-spacing: 1px;
+    text-shadow: 2px 2px 0 #000;
+    text-transform: uppercase;
+}
+
+/* Redesigned Layout */
+.main-content-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    /* Reduced from 1.5rem */
+    width: 100%;
+    max-width: 80rem;
+    /* Reduced from 90rem */
+    z-index: 1;
+}
+
+.profile-hero-card,
+.rooms-section-fancy,
+.team-column {
+    background: #4e3629;
+    background-image: linear-gradient(135deg, #5c4033, #4e3629);
+    border: 4px solid #2e1a0a;
+    /* Reduced from 6px */
+    box-shadow:
+        inset 3px 3px 0 #7a5a3a,
+        inset -3px -3px 0 #1a0f05,
+        0 8px 0 rgba(0, 0, 0, 0.4);
+    padding: 1.2rem;
+    /* Reduced from 2rem */
+    color: #fff;
+}
+
+.card-header,
+.section-header,
+.team-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.2rem;
+    /* Reduced from 1.4rem */
+    color: #ffd700;
+    border-bottom: 2px solid #2e1a0a;
+    padding-bottom: 0.4rem;
+    margin-bottom: 0.4rem;
+    text-shadow: 2px 2px 0 #000;
+}
+
+.hero-text-input {
+    border: 2px solid #ffd700;
+    padding: 0.4rem;
+    color: #ffd700;
+    font-family: 'VT323', monospace;
+    font-size: 1.1rem;
+    outline: none;
+    width: 100%;
+    box-shadow: inset 2px 2px 0 #000;
+}
+
+.hero-btn-primary,
+.btn-primary {
+    background: #b71c1c;
+    border: 2px solid #000;
+    color: #fff;
+    padding: 0.4rem 0.8rem;
+    /* Reduced */
+    font-family: 'VT323', monospace;
+    font-size: 1.1rem;
+    /* Reduced from 1.2rem */
+    cursor: pointer;
+    box-shadow:
+        inset 2px 2px 0 #e53935,
+        inset -2px -2px 0 #7f0000;
+    transition: transform 0.1s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.hero-btn-primary:active,
+.btn-primary:active {
+    transform: translateY(2px);
+    box-shadow: inset 2px 2px 0 #e53935;
+}
+
+.btn-primary.ready {
+    background: #2e7d32;
+    box-shadow:
+        inset 3px 3px 0 #4caf50,
+        inset -3px -3px 0 #1b5e20;
+}
+
+.room-card,
+.player-slot {
+    background: #1a0f05;
+    border: 3px solid #000;
+    /* Reduced from 4px */
+    padding: 0.8rem;
+    /* Reduced from 1.2rem */
+    margin-bottom: 1rem;
+    /* Reduced from 1.5rem */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+}
+
+.player-slot.ready {
+    border-color: #ffd700;
+    background: #2e7d32;
+    box-shadow: inset 3px 3px 0 #4caf50, 4px 4px 0 rgba(0, 0, 0, 0.5);
+}
+
+.team-1-header {
+    color: #64b5f6;
+}
+
+.team-2-header {
+    color: #e57373;
+}
+
+/* Champion Picker */
+.champion-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    /* Force 5 columns for desktop */
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    width: 100%;
+}
+
+.champ-card {
+    background: #2e1a0a;
+    border: 3px solid #000;
+    padding: 0.8rem;
+    /* Reduced from 1.2rem */
+    cursor: pointer;
+    text-align: center;
+    position: relative;
+    transition: all 0.1s;
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 80px;
+    /* Reduced from 100px */
+}
+
+.champ-card h3 {
+    font-size: 1.1rem;
+    /* Reduced */
+    margin: 4px 0;
+}
+
+.champ-card p {
+    font-size: 0.8rem;
+    /* Reduced */
+    line-height: 1;
+}
+
+.champ-avatar {
+    width: 44px;
+    /* Reduced from 60px */
+    height: 44px;
+    margin: 0 auto 8px;
+    background: #000;
+    border: 3px solid #8b5a2b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    /* Reduced from 3rem */
+    color: #ffd700;
+}
+
+/* Chat */
+.chat-container {
+    width: 320px;
+    /* Reduced from 400px */
+    background: #1a0f05;
+    border: 4px solid #2e1a0a;
+    display: flex;
+    flex-direction: column;
+    font-size: 1.2rem;
+    /* Reduced from 1.6rem */
+    box-shadow: 0 8px 0 rgba(0, 0, 0, 0.4);
+}
+
+.chat-header {
+    background: #2e1a0a;
+    color: #ffd700;
+    padding: 0.4rem;
+    border-bottom: 2px solid #ffd700;
+    text-align: center;
+    font-size: 1.1rem;
+}
+
+.chat-messages {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    background: #1a110a;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.message {
+    border-left: 3px solid #8b5a2b;
+    padding-left: 0.8rem;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.message-sender {
+    color: #ffd700;
+    font-size: 1.1rem;
+    margin-bottom: 2px;
+}
+
+.chat-input-area {
+    padding: 0.6rem;
+    background: #2e1a0a;
+}
+
+.chat-input-area input {
+    background: #000;
+    border: 2px solid #8b5a2b;
+    color: #ffd700;
+    padding: 0.5rem;
+    font-size: 1.1rem;
+}
+
+/* Responsiveness */
+@media (max-width: 1024px) {
+    .main-content-layout {
+        grid-template-columns: 1fr;
+        max-width: 90%;
+    }
+
+    .lobby-header,
+    .active-room-header {
+        max-width: 90%;
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+
+    .chat-container {
+        width: 100%;
+        max-height: 250px;
+    }
+}
+
+@media (max-width: 768px) {
+    .champion-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .lobby-title {
+        font-size: 1.6rem;
+    }
+
+    .active-room-container {
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .champion-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Technical UI */
+.hero-input-area {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+}
+
+.label-technical {
+    display: block;
+    color: #deb887;
+    font-size: 1.1rem;
+    margin-bottom: 0.4rem;
+    letter-spacing: 1px;
+}
+
+.card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    margin-top: 1rem;
+    color: #888;
+    font-size: 1rem;
+    border-top: 2px solid #2e1a0a;
+    padding-top: 1rem;
+}
