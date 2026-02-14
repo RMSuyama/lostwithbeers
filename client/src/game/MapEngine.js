@@ -179,7 +179,14 @@ const CHAMPION_SKINS = {
 CHAMPION_SKINS.shiryusuyama = CHAMPION_SKINS.shiryu;
 CHAMPION_SKINS.rafarofa = CHAMPION_SKINS.charles;
 
-export const generateMap = () => {
+export const generateMap = (seed = 0) => {
+    // Simple LCG seeded random
+    let s = seed;
+    const rnd = () => {
+        s = (s * 9301 + 49297) % 233280;
+        return s / 233280;
+    };
+
     // Start with WATER (everything is blocked unless carved)
     const grid = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(TILE_TYPES.MURKY_WATER));
     const collisions = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(true));
@@ -230,8 +237,8 @@ export const generateMap = () => {
 
     // Decorative Crates/Obstacles on paths
     for (let i = 0; i < 150; i++) {
-        const rx = Math.floor(Math.random() * MAP_WIDTH);
-        const ry = Math.floor(Math.random() * MAP_HEIGHT);
+        const rx = Math.floor(rnd() * MAP_WIDTH);
+        const ry = Math.floor(rnd() * MAP_HEIGHT);
         if (grid[ry][rx] === TILE_TYPES.GRASS) {
             grid[ry][rx] = TILE_TYPES.CARGO_CRATE;
             collisions[ry][rx] = true;
@@ -242,10 +249,10 @@ export const generateMap = () => {
 };
 
 export class MapRenderer {
-    constructor(canvas) {
+    constructor(canvas, seed = 0) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
-        this.mapData = generateMap();
+        this.mapData = generateMap(seed);
         this.colors = {
             [TILE_TYPES.GRASS]: '#143411',
             [TILE_TYPES.COBBLESTONE]: '#475569',

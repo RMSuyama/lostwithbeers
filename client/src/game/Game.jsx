@@ -44,6 +44,8 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const gameStateRef = useRef(gameState);
     useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
 
+    const playersRef = useRef([]); // Critical for draw loop closure
+
     const [showEscMenu, setShowEscMenu] = useState(false);
     const showEscMenuRef = useRef(showEscMenu);
     useEffect(() => { showEscMenuRef.current = showEscMenu; }, [showEscMenu]);
@@ -96,7 +98,10 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         console.log(`[GAME] Mounted! Room: ${roomId}, Champ Prop: ${championId}, Player: ${playerName}`);
         setIsMounted(true);
         if (!canvasRef.current) return;
-        engineRef.current = new MapRenderer(canvasRef.current);
+
+        // Use hash of roomId as seed for map consistency
+        const seed = Array.from(roomId).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        engineRef.current = new MapRenderer(canvasRef.current, seed);
 
         // Load Jaca Assets
         const jSprite = new Image();
@@ -131,13 +136,18 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         const channel = supabase.channel(`game_state:${roomId}`);
         channel.on('broadcast', { event: 'player_update' }, ({ payload }) => {
             if (payload.id === playerName) return;
-            setPlayers(prev => {
-                const idx = prev.findIndex(p => p.id === payload.id);
-                if (idx === -1) return [...prev, payload];
-                const next = [...prev];
+
+            // Update the display state (optional/slow) and the logic REF (fast/reliable)
+            playersRef.current = (() => {
+                const idx = playersRef.current.findIndex(p => p.id === payload.id);
+                if (idx === -1) return [...playersRef.current, payload];
+                const next = [...playersRef.current];
                 next[idx] = payload;
                 return next;
-            });
+            })();
+
+            // Still update state so UI elements (like a player list) might react
+            setPlayers(playersRef.current);
         }).on('broadcast', { event: 'wave_sync' }, ({ payload }) => {
             if (!isHost.current) {
                 waveStats.current = payload.wave;
@@ -146,7 +156,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         }).subscribe();
 
         const broadcastInterval = setInterval(() => {
-            if (gameState === 'playing') {
+            if (gameStateRef.current === 'playing') {
                 channel.send({
                     type: 'broadcast',
                     event: 'player_update',
@@ -155,7 +165,9 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                         angle: facingAngle.current,
                         name: playerName, color: getChamp(championId).color, championId,
                         hp: statsRef.current.hp, maxHp: statsRef.current.maxHp,
-                        totalDamage: statsRef.current.totalDamage, kills: statsRef.current.kills
+                        totalDamage: statsRef.current.totalDamage, kills: statsRef.current.kills,
+                        walkTimer: walkTimerRef.current,
+                        isMoving: Math.hypot(myPos.current.x - lastPosRef.current.x, myPos.current.y - lastPosRef.current.y) > 0.1
                     }
                 });
             }
@@ -201,7 +213,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             }
             lastPosRef.current = { ...myPos.current };
 
-            if (gameState === 'over') return;
+            if (gameStateRef.current === 'over') return;
 
             // Camera follow
             const lerp = 0.12;
@@ -267,7 +279,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 const distBase = Math.hypot(dxBase, dyBase);
 
                 // Aggro / Chasing
-                if (distPlayer < 400 && gameState === 'playing') {
+                if (distPlayer < 400 && gameStateRef.current === 'playing') {
                     const angle = Math.atan2(myPos.current.y - m.y, myPos.current.x - m.x);
                     const nextX = m.x + Math.cos(angle) * m.speed;
                     const nextY = m.y + Math.sin(angle) * m.speed;
@@ -372,7 +384,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     isMoving: Math.hypot(myPos.current.x - lastPosRef.current.x, myPos.current.y - lastPosRef.current.y) > 0.1
                 };
                 engineRef.current.draw(
-                    [...players, me],
+                    [...playersRef.current, me],
                     cameraRef.current,
                     [], // Dummies
                     monstersRef.current,
