@@ -28,23 +28,6 @@ const Auth = () => {
         }
     };
 
-    const handleGuestLogin = async () => {
-        setLoading(true);
-        try {
-            const { error } = await supabase.auth.signInAnonymously();
-            if (error) {
-                if (error.message.includes('disabled')) {
-                    alert('🛡️ ACESSO NEGADO: O Login Anônimo está desativado no Painel do Supabase.\n\nPara corrigir:\n1. Vá em Authentication -> Providers\n2. Ative "Anonymous"\n3. Clique em Save');
-                } else {
-                    throw error;
-                }
-            }
-        } catch (error) {
-            alert('Falha na Missão (Convidado): ' + error.message);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     return (
         <div className="lobby-container" style={{ justifyContent: 'center' }}>
@@ -89,18 +72,6 @@ const Auth = () => {
                             {loading ? 'CONVOCANDO...' : (isSignUp ? 'CRIAR CONTA' : 'LOGAR')}
                         </button>
 
-                        {!isSignUp && (
-                            <button
-                                type="button"
-                                onClick={handleGuestLogin}
-                                disabled={loading}
-                                className="hero-btn-primary"
-                                style={{ width: '100%', background: '#4e3629', borderColor: '#8b5a2b' }}
-                            >
-                                <Sword size={20} style={{ marginRight: '8px' }} />
-                                ENTRAR COMO CONVIDADO
-                            </button>
-                        )}
                     </div>
 
                     <button
