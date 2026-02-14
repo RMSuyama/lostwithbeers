@@ -735,13 +735,13 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                                 left: `${(p.x / (MAP_WIDTH * TILE_SIZE)) * 100}%`,
                                 top: `${(p.y / (MAP_HEIGHT * TILE_SIZE)) * 100}%`,
                                 width: '6px', height: '6px',
-                                background: p.id === cameraRef.current.followId ? '#3b82f6' : '#ef4444',
+                                background: p.id === playerName ? '#3b82f6' : '#ef4444',
                                 borderRadius: '50%',
                                 transform: 'translate(-50%, -50%)',
                                 zIndex: 10
                             }} />
                         ))}
-                        {monsters.map(m => (
+                        {monstersRef.current.map(m => (
                             <div key={m.id} style={{
                                 position: 'absolute',
                                 left: `${(m.x / (MAP_WIDTH * TILE_SIZE)) * 100}%`,
