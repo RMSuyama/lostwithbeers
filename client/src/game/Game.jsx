@@ -6,18 +6,18 @@ import MobileControls from '../components/MobileControls';
 
 // Champion Configuration - Porto Cast Roster
 const CHAMPIONS = {
-    jaca: { name: 'Jaca', color: '#15803d', hp: 100, mana: 40, basic: { range: 80, arc: 1.6, dmg: 28 }, skill: { name: 'Death Roll', cost: 15, cd: 4000 } },
-    djox: { name: 'Djox', color: '#334155', hp: 140, mana: 50, basic: { range: 110, arc: 2.2, dmg: 20, kb: 30 }, skill: { name: 'Anchor Smash', cost: 20, cd: 6000 } },
-    brunao: { name: 'Brunão', color: '#db2777', hp: 180, mana: 60, basic: { range: 70, arc: 1.4, dmg: 16, kb: 50 }, skill: { name: 'Guardian Aura', cost: 25, cd: 9000 } },
-    jubarbie: { name: 'Jubarbie', color: '#1e3a8a', hp: 220, mana: 50, basic: { range: 130, arc: 2.6, dmg: 24 }, skill: { name: 'Heavy Splash', cost: 30, cd: 8000 } },
-    shiryu: { name: 'Shiryu Suyama', color: '#064e3b', hp: 90, mana: 130, basic: { range: 250, arc: 0.6, dmg: 12, ranged: true }, skill: { name: 'Sopro Ancestral', cost: 35, cd: 6000 } },
-    charles: { name: 'J. Charles', color: '#475569', hp: 80, mana: 70, basic: { range: 350, arc: 0.3, dmg: 20, ranged: true }, skill: { name: 'Bateria de Guerra', cost: 25, cd: 7000 } },
-    gusto: { name: 'Gusto', color: '#78350f', hp: 150, mana: 60, basic: { range: 90, arc: 1.8, dmg: 22 }, skill: { name: 'Frasco Ácido', cost: 20, cd: 6000 } },
-    kleyiton: { name: 'Kleyiton', color: '#b45309', hp: 110, mana: 90, basic: { range: 160, arc: 1.2, dmg: 18 }, skill: { name: 'Campo Geométrico', cost: 30, cd: 10000 } },
-    milan: { name: 'Milan', color: '#4a044e', hp: 70, mana: 160, basic: { range: 190, arc: 2.0, dmg: 14 }, skill: { name: 'Blefe Espectral', cost: 25, cd: 5000 } },
-    enzo: { name: 'Enzo', color: '#0369a1', hp: 90, mana: 50, basic: { range: 100, arc: 2.2, dmg: 17 }, skill: { name: 'Riff Elétrico', cost: 12, cd: 3000 } },
-    mayron: { name: 'Mayron', color: '#0d9488', hp: 110, mana: 100, basic: { range: 170, arc: 2.4, dmg: 18 }, skill: { name: 'Tide Wave', cost: 25, cd: 6000 } },
-    klebao: { name: 'Klebão', color: '#ffffff', hp: 200, mana: 100, basic: { range: 300, arc: 0.2, dmg: 35, ranged: true }, skill: { name: 'Julgamento Supremo', cost: 50, cd: 12000 } }
+    jaca: { name: 'Jaca', color: '#15803d', hp: 100, mana: 40, basic: { range: 80, arc: 1.6, dmg: 1 }, skill: { name: 'Death Roll', cost: 15, cd: 4000 } },
+    djox: { name: 'Djox', color: '#334155', hp: 140, mana: 50, basic: { range: 110, arc: 2.2, dmg: 1, kb: 30 }, skill: { name: 'Anchor Smash', cost: 20, cd: 6000 } },
+    brunao: { name: 'Brunão', color: '#db2777', hp: 180, mana: 60, basic: { range: 70, arc: 1.4, dmg: 1, kb: 50 }, skill: { name: 'Guardian Aura', cost: 25, cd: 9000 } },
+    jubarbie: { name: 'Jubarbie', color: '#1e3a8a', hp: 220, mana: 50, basic: { range: 130, arc: 2.6, dmg: 1 }, skill: { name: 'Heavy Splash', cost: 30, cd: 8000 } },
+    shiryu: { name: 'Shiryu Suyama', color: '#064e3b', hp: 90, mana: 130, basic: { range: 250, arc: 0.6, dmg: 1, ranged: true }, skill: { name: 'Sopro Ancestral', cost: 35, cd: 6000 } },
+    charles: { name: 'J. Charles', color: '#475569', hp: 80, mana: 70, basic: { range: 350, arc: 0.3, dmg: 1, ranged: true }, skill: { name: 'Bateria de Guerra', cost: 25, cd: 7000 } },
+    gusto: { name: 'Gusto', color: '#78350f', hp: 150, mana: 60, basic: { range: 90, arc: 1.8, dmg: 1 }, skill: { name: 'Frasco Ácido', cost: 20, cd: 6000 } },
+    kleyiton: { name: 'Kleyiton', color: '#b45309', hp: 110, mana: 90, basic: { range: 160, arc: 1.2, dmg: 1 }, skill: { name: 'Campo Geométrico', cost: 30, cd: 10000 } },
+    milan: { name: 'Milan', color: '#4a044e', hp: 70, mana: 160, basic: { range: 190, arc: 2.0, dmg: 1 }, skill: { name: 'Blefe Espectral', cost: 25, cd: 5000 } },
+    enzo: { name: 'Enzo', color: '#0369a1', hp: 90, mana: 50, basic: { range: 100, arc: 2.2, dmg: 1 }, skill: { name: 'Riff Elétrico', cost: 12, cd: 3000 } },
+    mayron: { name: 'Mayron', color: '#0d9488', hp: 110, mana: 100, basic: { range: 170, arc: 2.4, dmg: 1 }, skill: { name: 'Tide Wave', cost: 25, cd: 6000 } },
+    klebao: { name: 'Klebão', color: '#ffffff', hp: 200, mana: 100, basic: { range: 300, arc: 0.2, dmg: 1, ranged: true }, skill: { name: 'Julgamento Supremo', cost: 50, cd: 12000 } }
 };
 
 // Aliases for retro-compatibility
@@ -71,6 +71,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const attackEffect = useRef(null);
 
     useEffect(() => {
+        console.log(`[GAME] Mounted! Room: ${roomId}, Champ Prop: ${championId}, Player: ${playerName}`);
         setIsMounted(true);
         if (!canvasRef.current) return;
         engineRef.current = new MapRenderer(canvasRef.current);
@@ -208,8 +209,17 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 // Aggro / Chasing
                 if (distPlayer < 400 && gameState === 'playing') {
                     const angle = Math.atan2(myPos.current.y - m.y, myPos.current.x - m.x);
-                    m.x += Math.cos(angle) * m.speed;
-                    m.y += Math.sin(angle) * m.speed;
+                    const nextX = m.x + Math.cos(angle) * m.speed;
+                    const nextY = m.y + Math.sin(angle) * m.speed;
+
+                    if (engineRef.current) {
+                        const gX = Math.floor(nextX / TILE_SIZE), gY = Math.floor(nextY / TILE_SIZE);
+                        if (!engineRef.current.mapData.collisions[gY]?.[gX]) {
+                            m.x = nextX; m.y = nextY;
+                        }
+                    } else {
+                        m.x = nextX; m.y = nextY;
+                    }
 
                     // Attack Player
                     if (distPlayer < 40) {
@@ -224,8 +234,17 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     // Move toward Base
                     if (distBase > 60) {
                         const angle = Math.atan2(dyBase, dxBase);
-                        m.x += Math.cos(angle) * m.speed;
-                        m.y += Math.sin(angle) * m.speed;
+                        const nextX = m.x + Math.cos(angle) * m.speed;
+                        const nextY = m.y + Math.sin(angle) * m.speed;
+
+                        if (engineRef.current) {
+                            const gX = Math.floor(nextX / TILE_SIZE), gY = Math.floor(nextY / TILE_SIZE);
+                            if (!engineRef.current.mapData.collisions[gY]?.[gX]) {
+                                m.x = nextX; m.y = nextY;
+                            }
+                        } else {
+                            m.x = nextX; m.y = nextY;
+                        }
                     } else {
                         // Attack Base
                         if (!m.lastAttack || now - m.lastAttack > 1500) {
@@ -248,7 +267,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 if (dist < combinedRadius && dist > 0) {
                     const overlap = combinedRadius - dist;
                     const angle = Math.atan2(dy, dx);
-                    // Push player back slightly, push monster more
+                    // Light push for player-monster interaction
                     myPos.current.x -= Math.cos(angle) * (overlap * 0.3);
                     myPos.current.y -= Math.sin(angle) * (overlap * 0.3);
                     m.x += Math.cos(angle) * (overlap * 0.7);
@@ -256,21 +275,21 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 }
             });
 
-            // Monster <-> Monster pushing
-            for (let i = 0; i < monstersRef.current.length; i++) {
-                for (let j = i + 1; j < monstersRef.current.length; j++) {
-                    const m1 = monstersRef.current[i];
-                    const m2 = monstersRef.current[j];
-                    const dx = m2.x - m1.x;
-                    const dy = m2.y - m1.y;
-                    const dist = Math.hypot(dx, dy);
-                    if (dist < 30 && dist > 0) {
-                        const overlap = 30 - dist;
-                        const angle = Math.atan2(dy, dx);
-                        m1.x -= Math.cos(angle) * overlap * 0.5;
-                        m1.y -= Math.sin(angle) * overlap * 0.5;
-                        m2.x += Math.cos(angle) * overlap * 0.5;
-                        m2.y += Math.sin(angle) * overlap * 0.5;
+            // Monster <-> Monster pushing (Harder blocking)
+            for (let p = 0; p < 2; p++) {
+                for (let i = 0; i < monstersRef.current.length; i++) {
+                    for (let j = i + 1; j < monstersRef.current.length; j++) {
+                        const m1 = monstersRef.current[i], m2 = monstersRef.current[j];
+                        const dx = m2.x - m1.x, dy = m2.y - m1.y;
+                        const dist = Math.hypot(dx, dy);
+                        if (dist < 35 && dist > 0) {
+                            const overlap = 35 - dist;
+                            const angle = Math.atan2(dy, dx);
+                            m1.x -= Math.cos(angle) * overlap * 0.5;
+                            m1.y -= Math.sin(angle) * overlap * 0.5;
+                            m2.x += Math.cos(angle) * overlap * 0.5;
+                            m2.y += Math.sin(angle) * overlap * 0.5;
+                        }
                     }
                 }
             }
@@ -377,8 +396,24 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             if (keys['arrowright'] || vKeys.has('ArrowRight')) mx += speed;
 
             if (mx !== 0 || my !== 0) {
-                myPos.current.x = Math.max(0, Math.min(MAP_WIDTH * TILE_SIZE, myPos.current.x + mx));
-                myPos.current.y = Math.max(0, Math.min(MAP_HEIGHT * TILE_SIZE, myPos.current.y + my));
+                const nextX = Math.max(0, Math.min(MAP_WIDTH * TILE_SIZE, myPos.current.x + mx));
+                const nextY = Math.max(0, Math.min(MAP_HEIGHT * TILE_SIZE, myPos.current.y + my));
+
+                // HARD COLLISION: Environment
+                if (engineRef.current) {
+                    const gridX = Math.floor(nextX / TILE_SIZE);
+                    const gridY = Math.floor(nextY / TILE_SIZE);
+                    if (engineRef.current.mapData.collisions[gridY]?.[gridX]) {
+                        return; // Block movement
+                    }
+                }
+
+                // HARD COLLISION: Monsters
+                const isBlockedByMonster = monstersRef.current.some(m => Math.hypot(m.x - nextX, m.y - nextY) < 30);
+                if (isBlockedByMonster) return;
+
+                myPos.current.x = nextX;
+                myPos.current.y = nextY;
                 facingAngle.current = Math.atan2(my, mx);
             }
         }, 16);
@@ -395,8 +430,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const basicAttack = () => {
         const champ = getChamp(championId);
         const angle = facingAngle.current;
-        const levelBonus = 1 + (statsRef.current.level * 0.2);
-        const dmg = champ.basic.dmg * levelBonus;
+        const dmg = Math.floor(statsRef.current.atk); // Use direct statsRef for base 1 + lvl scaling
 
         attackEffect.current = { x: myPos.current.x, y: myPos.current.y, angle, time: Date.now(), type: championId };
         setTimeout(() => attackEffect.current = null, 150);
