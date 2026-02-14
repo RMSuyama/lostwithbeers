@@ -61,8 +61,28 @@ function App() {
     }, [session]);
 
     if (loading) return (
-        <div style={{ background: '#0b1a0b', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffd700', fontFamily: 'VT323', fontSize: '2rem' }}>
-            CARREGANDO REINO...
+        <div style={{
+            height: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#ffd700',
+            fontFamily: 'VT323',
+            fontSize: '2rem',
+            backgroundImage: `url(/src/loading_bg.png)`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            textShadow: '2px 2px 0 #000'
+        }}>
+            <div style={{
+                background: 'rgba(0, 0, 0, 0.7)',
+                padding: '2rem',
+                border: '2px solid #ffd700',
+                borderRadius: '8px',
+                textAlign: 'center'
+            }}>
+                CARREGANDO REINO...
+            </div>
         </div>
     );
 
