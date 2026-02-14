@@ -30,8 +30,8 @@ CHAMPIONS.rafarofa = CHAMPIONS.charles; // Charles replaced Rafarofa in some ver
 const getChamp = (id) => CHAMPIONS[id] || CHAMPIONS.jaca;
 
 const BASE_POS = { x: 50 * TILE_SIZE, y: 90 * TILE_SIZE };
-const SPAWN_POS_L = { x: 15 * TILE_SIZE, y: 10 * TILE_SIZE };
-const SPAWN_POS_R = { x: 85 * TILE_SIZE, y: 10 * TILE_SIZE };
+const SPAWN_POS_L = { x: 20 * TILE_SIZE, y: 10 * TILE_SIZE };
+const SPAWN_POS_R = { x: 80 * TILE_SIZE, y: 10 * TILE_SIZE };
 const HUB_POS = { x: 50 * TILE_SIZE, y: 60 * TILE_SIZE };
 
 const Game = ({ roomId, playerName, championId, user, setInGame }) => {

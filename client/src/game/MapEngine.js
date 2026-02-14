@@ -213,27 +213,60 @@ export const generateMap = (seed = 0) => {
 
     // Draw the "U/Y" shape matching the user's drawing
     // Central Hub
-    const hubX = 50, hubY = 60;
-    drawPath(hubX, hubY, hubX, hubY, 12, TILE_TYPES.COBBLESTONE); // Wide center
+    const hubX = 50, hubY = 65;
 
-    // Bottom Path to Base (Ambev Truck)
-    drawPath(hubX, hubY, hubX, 90, 10, TILE_TYPES.GRASS);
-    drawPath(hubX, 85, hubX, 95, 12, TILE_TYPES.FORT_WOOD); // Base Platform
+    // Draw Land (Grass) first
+    // Bottom Path to Base (Ambev Truck) - Slightly longer and narrower
+    drawPath(hubX, hubY, hubX, 90, 6, TILE_TYPES.GRASS);
+    drawPath(hubX, 88, hubX, 92, 12, TILE_TYPES.FORT_WOOD); // Base Platform
 
-    // Top-Left Path (Spawn 1)
-    drawPath(hubX, hubY, 30, 45, 8, TILE_TYPES.GRASS); // Bend
-    drawPath(30, 45, 15, 10, 8, TILE_TYPES.GRASS); // Top-left terminal
+    // Top-Left Path (Spawn 1) - Longer and narrower
+    drawPath(hubX, hubY, 30, 50, 4, TILE_TYPES.GRASS);
+    drawPath(30, 50, 20, 10, 4, TILE_TYPES.GRASS);
 
-    // Top-Right Path (Spawn 2)
-    drawPath(hubX, hubY, 70, 45, 8, TILE_TYPES.GRASS); // Bend
-    drawPath(70, 45, 85, 10, 8, TILE_TYPES.GRASS); // Top-right terminal
+    // Top-Right Path (Spawn 2) - Longer and narrower
+    drawPath(hubX, hubY, 70, 50, 4, TILE_TYPES.GRASS);
+    drawPath(70, 50, 80, 10, 4, TILE_TYPES.GRASS);
 
-    // Lateral Loops (The circles in the drawing)
-    drawPath(30, 65, 30, 65, 10, TILE_TYPES.COBBLESTONE);
-    drawPath(70, 65, 70, 65, 10, TILE_TYPES.COBBLESTONE);
-    // Connect loops to hub
-    drawPath(30, 65, hubX, hubY, 6, TILE_TYPES.GRASS);
-    drawPath(70, 65, hubX, hubY, 6, TILE_TYPES.GRASS);
+    // Lateral Loops (Circles)
+    drawPath(25, 70, 25, 70, 6, TILE_TYPES.COBBLESTONE);
+    drawPath(75, 70, 75, 70, 6, TILE_TYPES.COBBLESTONE);
+    drawPath(25, 70, hubX, hubY, 3, TILE_TYPES.GRASS);
+    drawPath(75, 70, hubX, hubY, 3, TILE_TYPES.GRASS);
+
+    // DRAW STONE WALLS AROUND LAND
+    // We scan the grid and place walls on any water tile adjacent to land
+    for (let y = 1; y < MAP_HEIGHT - 1; y++) {
+        for (let x = 1; x < MAP_WIDTH - 1; x++) {
+            if (grid[y][x] === TILE_TYPES.MURKY_WATER) {
+                const adjLand = [
+                    grid[y - 1][x], grid[y + 1][x], grid[y][x - 1], grid[y][x + 1],
+                    grid[y - 1][x - 1], grid[y - 1][x + 1], grid[y + 1][x - 1], grid[y + 1][x + 1]
+                ].some(t => t !== TILE_TYPES.MURKY_WATER && t !== TILE_TYPES.STONE_WALL);
+
+                if (adjLand) {
+                    // Create Stone Wall boundary
+                    grid[y][x] = TILE_TYPES.STONE_WALL;
+                    collisions[y][x] = true;
+                }
+            }
+        }
+    }
+
+    // GATES: Open the walls at the very ends of spawn paths to let monsters through
+    const openGate = (gx, gy) => {
+        for (let dy = -3; dy <= 3; dy++) {
+            for (let dx = -3; dx <= 3; dx++) {
+                const ty = gy + dy, tx = gx + dx;
+                if (grid[ty]?.[tx] === TILE_TYPES.STONE_WALL) {
+                    grid[ty][tx] = TILE_TYPES.MURKY_WATER;
+                    collisions[ty][tx] = false; // Monsters can cross water anyway usually
+                }
+            }
+        }
+    };
+    openGate(20, 10);
+    openGate(80, 10);
 
     // Decorative Crates/Obstacles on paths
     for (let i = 0; i < 150; i++) {
