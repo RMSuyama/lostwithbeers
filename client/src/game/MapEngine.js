@@ -212,36 +212,92 @@ export const generateMap = (seed = 0) => {
         }
     };
 
-    // Draw the "U/Y" shape matching the user's drawing
-    // Central Hub
-    const hubX = 50, hubY = 60;
+    // === FAITHFUL REPRODUCTION OF SKETCH ===
+    // Top-down MOBA map with organic curved paths
+    // Two spawn corridors → Y-junction → Curved loops → Base entrance
 
-    // Curved/Circular path system near the base
-    const baseCX = 50, baseCY = 82, radius = 12;
-    for (let angle = 0; angle < Math.PI * 2; angle += 0.05) {
-        const px = Math.floor(baseCX + Math.cos(angle) * (radius + 2));
-        const py = Math.floor(baseCY + Math.sin(angle) * radius);
-        drawPath(px, py, px, py, 4, TILE_TYPES.GRASS);
-    }
-    // Connect ring to central hub
-    drawPath(hubX, hubY, baseCX, baseCY - radius, 5, TILE_TYPES.GRASS);
+    // Helper: Bezier curve path generator
+    const drawCurve = (points, width, type) => {
+        const steps = 100;
+        for (let t = 0; t <= steps; t++) {
+            const u = t / steps;
+            // Cubic Bezier interpolation
+            const x = Math.pow(1 - u, 3) * points[0].x +
+                3 * Math.pow(1 - u, 2) * u * points[1].x +
+                3 * (1 - u) * Math.pow(u, 2) * points[2].x +
+                Math.pow(u, 3) * points[3].x;
+            const y = Math.pow(1 - u, 3) * points[0].y +
+                3 * Math.pow(1 - u, 2) * u * points[1].y +
+                3 * (1 - u) * Math.pow(u, 2) * points[2].y +
+                Math.pow(u, 3) * points[3].y;
+            drawPath(Math.floor(x), Math.floor(y), Math.floor(x), Math.floor(y), width, type);
+        }
+    };
 
-    // Bottom Base (Ambev Truck)
-    drawPath(hubX, 85, hubX, 95, 12, TILE_TYPES.FORT_WOOD); // Base Platform
+    // LEFT SPAWN (Top-Left Corner) → Curved inward
+    drawPath(15, 5, 15, 15, 5, TILE_TYPES.GRASS); // Vertical start
+    drawCurve([
+        { x: 15, y: 15 },
+        { x: 15, y: 25 },
+        { x: 20, y: 35 },
+        { x: 30, y: 42 }
+    ], 5, TILE_TYPES.GRASS);
 
-    // Top-Left Path (Spawn 1) - Longer and narrower
-    drawPath(hubX, hubY, 20, 40, 4, TILE_TYPES.GRASS);
-    drawPath(20, 40, 20, 10, 4, TILE_TYPES.GRASS);
+    // RIGHT SPAWN (Top-Right Corner) → Curved inward  
+    drawPath(85, 5, 85, 15, 5, TILE_TYPES.GRASS); // Vertical start
+    drawCurve([
+        { x: 85, y: 15 },
+        { x: 85, y: 25 },
+        { x: 80, y: 35 },
+        { x: 70, y: 42 }
+    ], 5, TILE_TYPES.GRASS);
 
-    // Top-Right Path (Spawn 2) - Longer and narrower
-    drawPath(hubX, hubY, 80, 40, 4, TILE_TYPES.GRASS);
-    drawPath(80, 40, 80, 10, 4, TILE_TYPES.GRASS);
+    // Y-JUNCTION: Both paths meet at center
+    drawPath(30, 42, 50, 48, 5, TILE_TYPES.GRASS); // Left approach
+    drawPath(70, 42, 50, 48, 5, TILE_TYPES.GRASS); // Right approach
 
-    // Lateral Loops (Circles)
-    drawPath(12, 60, 12, 60, 6, TILE_TYPES.COBBLESTONE);
-    drawPath(88, 60, 88, 60, 6, TILE_TYPES.COBBLESTONE);
-    drawPath(12, 60, hubX, hubY, 3, TILE_TYPES.GRASS);
-    drawPath(88, 60, hubX, hubY, 3, TILE_TYPES.GRASS);
+    // CENTER MERGE → Down toward loops
+    drawPath(50, 48, 50, 58, 6, TILE_TYPES.GRASS);
+
+    // LEFT LOOP (Yellow in sketch)
+    drawCurve([
+        { x: 50, y: 58 },
+        { x: 35, y: 62 },
+        { x: 25, y: 70 },
+        { x: 25, y: 78 }
+    ], 5, TILE_TYPES.GRASS);
+    drawCurve([
+        { x: 25, y: 78 },
+        { x: 25, y: 82 },
+        { x: 30, y: 85 },
+        { x: 40, y: 85 }
+    ], 5, TILE_TYPES.GRASS);
+
+    // RIGHT LOOP (Red in sketch)
+    drawCurve([
+        { x: 50, y: 58 },
+        { x: 65, y: 62 },
+        { x: 75, y: 70 },
+        { x: 75, y: 78 }
+    ], 5, TILE_TYPES.GRASS);
+    drawCurve([
+        { x: 75, y: 78 },
+        { x: 75, y: 82 },
+        { x: 70, y: 85 },
+        { x: 60, y: 85 }
+    ], 5, TILE_TYPES.GRASS);
+
+    // FINAL MERGE → Base entrance
+    drawPath(40, 85, 50, 87, 5, TILE_TYPES.GRASS);
+    drawPath(60, 85, 50, 87, 5, TILE_TYPES.GRASS);
+    drawPath(50, 87, 50, 92, 8, TILE_TYPES.GRASS);
+
+    // BASE PLATFORM (Tavern)
+    drawPath(50, 92, 50, 98, 16, TILE_TYPES.FORT_WOOD);
+
+    // Side decorative areas
+    drawPath(12, 60, 12, 60, 6, TILE_TYPES.COBBLESTONE); // Left port
+    drawPath(88, 60, 88, 60, 6, TILE_TYPES.COBBLESTONE); // Right port
 
     // DRAW STONE WALLS AROUND LAND
     // We scan the grid and place walls on any water tile adjacent to land
@@ -333,47 +389,41 @@ export class MapRenderer {
         const startY = Math.floor(-offsetY / TILE_SIZE);
         const endY = Math.floor((canvas.height - offsetY) / TILE_SIZE) + 1;
 
+        const objectLayer = [];
+
+        // PASS 1: Terrain Layer
         for (let y = Math.max(0, startY); y < Math.min(MAP_HEIGHT, endY); y++) {
             for (let x = Math.max(0, startX); x < Math.min(MAP_WIDTH, endX); x++) {
                 const tileType = this.mapData.grid[y][x];
                 const screenX = Math.floor(x * TILE_SIZE + offsetX);
                 const screenY = Math.floor(y * TILE_SIZE + offsetY);
 
-                // Base Color
+                if (tileType === TILE_TYPES.CARGO_CRATE || tileType === TILE_TYPES.STONE_WALL) {
+                    // Props go to Object Layer for Y-Sorting
+                    objectLayer.push({
+                        type: 'prop',
+                        tileType: tileType,
+                        x: x * TILE_SIZE + TILE_SIZE / 2,
+                        y: y * TILE_SIZE + TILE_SIZE, // Base Y for sorting
+                        renderX: screenX,
+                        renderY: screenY
+                    });
+                    // Draw a floor under props so water/nothing doesn't show through
+                    ctx.fillStyle = this.colors[TILE_TYPES.GRASS];
+                    ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                    continue;
+                }
+
                 ctx.fillStyle = this.colors[tileType];
                 ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
 
-                // Zelda Textures (Enhanced visibility)
-                if (tileType === TILE_TYPES.COBBLESTONE) {
-                    ctx.fillStyle = 'rgba(255,255,255,0.08)';
-                    ctx.fillRect(screenX + 2, screenY + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-                    ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
-                    ctx.strokeRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
-                } else if (tileType === TILE_TYPES.GRASS) {
+                // Minimal terrain details
+                if (tileType === TILE_TYPES.GRASS) {
                     ctx.fillStyle = '#1e3a1a';
                     const seed = (x * 13 + y * 7) % 5;
                     if (seed > 2) ctx.fillRect(screenX + 10, screenY + 10, 2, 4);
-                    if (seed > 3) ctx.fillRect(screenX + 20, screenY + 18, 2, 4);
-                } else if (tileType === TILE_TYPES.CARGO_CRATE) {
-                    // Make it VERY visible
-                    ctx.fillStyle = '#92400e'; ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
-                    ctx.strokeStyle = '#431407'; ctx.lineWidth = 4;
-                    ctx.strokeRect(screenX + 2, screenY + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-                    ctx.beginPath();
-                    ctx.moveTo(screenX, screenY); ctx.lineTo(screenX + TILE_SIZE, screenY + TILE_SIZE);
-                    ctx.moveTo(screenX + TILE_SIZE, screenY); ctx.lineTo(screenX, screenY + TILE_SIZE);
-                    ctx.stroke();
-                } else if (tileType === TILE_TYPES.STONE_WALL) {
-                    ctx.fillStyle = '#64748b'; ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
-                    ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
-                    ctx.strokeRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
-                    // Brick pattern
-                    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                    ctx.fillRect(screenX, screenY + 8, 16, 2);
-                    ctx.fillRect(screenX + 16, screenY + 16, 16, 2);
                 } else if (tileType === TILE_TYPES.MURKY_WATER) {
-                    // Water ripples
-                    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
                     ctx.beginPath();
                     const wTimer = Date.now() * 0.002;
                     const wx = screenX + (x * 7 + y * 3) % 20;
@@ -384,133 +434,108 @@ export class MapRenderer {
             }
         }
 
-        entities.forEach(entity => {
-            const ex = Math.floor(entity.x + offsetX);
-            const ey = Math.floor(entity.y + offsetY);
+        // Add Entities to Object Layer
+        entities.forEach(e => objectLayer.push({ ...e, type: 'player', sortY: e.y }));
+        monsters.forEach(m => objectLayer.push({ ...m, type: 'monster', sortY: m.y }));
 
-            let bobY = 0;
-            let scaleX = 1;
-            let scaleY = 1;
+        // PASS 2: Object Layer (Y-Sorted)
+        objectLayer.sort((a, b) => (a.sortY || a.y) - (b.sortY || b.y));
 
-            if (entity.walkTimer) {
-                bobY = Math.abs(Math.sin(entity.walkTimer * 2)) * -12;
-                const s = Math.sin(entity.walkTimer * 2);
-                scaleX = 1 - s * 0.15;
-                scaleY = 1 + s * 0.15;
-            }
+        objectLayer.forEach(obj => {
+            const rx = Math.floor((obj.type === 'prop' ? obj.renderX : obj.x + offsetX));
+            const ry = Math.floor((obj.type === 'prop' ? obj.renderY : obj.y + offsetY));
 
-            ctx.fillStyle = 'rgba(0,0,0,0.2)';
-            ctx.beginPath(); ctx.ellipse(ex, ey + 15, 12, 6, 0, 0, Math.PI * 2); ctx.fill();
+            if (obj.type === 'prop') {
+                if (obj.tileType === TILE_TYPES.CARGO_CRATE) {
+                    ctx.fillStyle = '#92400e'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = '#431407'; ctx.lineWidth = 4;
+                    ctx.strokeRect(rx + 2, ry + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                    ctx.beginPath();
+                    ctx.moveTo(rx, ry); ctx.lineTo(rx + TILE_SIZE, ry + TILE_SIZE);
+                    ctx.moveTo(rx + TILE_SIZE, ry); ctx.lineTo(rx, ry + TILE_SIZE);
+                    ctx.stroke();
+                } else if (obj.tileType === TILE_TYPES.STONE_WALL) {
+                    ctx.fillStyle = '#64748b'; ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+                    ctx.strokeRect(rx, ry, TILE_SIZE, TILE_SIZE);
+                    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                    ctx.fillRect(rx, ry + 8, 16, 2); ctx.fillRect(rx + 16, ry + 16, 16, 2);
+                }
+            } else if (obj.type === 'player') {
+                let bobY = 0, sx = 1, sy = 1;
+                if (obj.walkTimer) {
+                    bobY = Math.abs(Math.sin(obj.walkTimer * 2)) * -12;
+                    const s = Math.sin(obj.walkTimer * 2);
+                    sx = 1 - s * 0.1; sy = 1 + s * 0.1;
+                }
+                // Soft Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath(); ctx.ellipse(rx, ry + 15, 12, 6, 0, 0, Math.PI * 2); ctx.fill();
 
-            ctx.save();
-            ctx.translate(ex, ey + bobY);
-            ctx.scale(scaleX, scaleY);
-            const skin = CHAMPION_SKINS[entity.championId] || CHAMPION_SKINS.default;
-            skin(ctx, 0, 0, entity.walkTimer || 0, entity.color, entity.angle || 0, this.jacaAssets, entity.isMoving !== undefined ? entity.isMoving : true);
-            ctx.restore();
+                ctx.save();
+                ctx.translate(rx, ry + bobY); ctx.scale(sx, sy);
+                const skin = CHAMPION_SKINS[obj.championId] || CHAMPION_SKINS.default;
+                skin(ctx, 0, 0, obj.walkTimer || 0, obj.color, obj.angle || 0, this.jacaAssets, obj.isMoving);
+                ctx.restore();
 
-            const isMe = entity.id === camera.followId;
-            if (!isMe || settings.showMyName) {
-                ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center';
-                ctx.fillText(entity.name, ex, ey - 35 + bobY);
+                // PASS 3: Overlay (Projectiles, FX, HUD/UI) handled after Pass 2 loop or inside?
+                // For performance, draw HUD here
+                const isMe = obj.id === camera.followId;
+                if (!isMe || settings.showMyName) {
+                    ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
+                    ctx.fillStyle = '#fff'; ctx.font = 'bold 12px "VT323", Arial'; ctx.textAlign = 'center';
+                    ctx.fillText(obj.name, rx, ry - 38 + bobY);
 
-                // Champion Class Name
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; ctx.font = 'italic 10px Arial';
-                ctx.fillText(entity.championId?.toUpperCase() || '', ex, ey - 22 + bobY);
-            }
-
-            ctx.fillStyle = '#333'; ctx.fillRect(ex - 15, ey - 48 + bobY, 30, 4);
-            ctx.fillStyle = '#ef4444'; ctx.fillRect(ex - 15, ey - 48 + bobY, (entity.hp / entity.maxHp) * 30, 4);
-        });
-
-        monsters.forEach(m => {
-            const mx = m.x + offsetX;
-            const my = m.y + offsetY;
-
-            // SEA MOBS
-            // SEA MOBS (Pixel Shaded)
-            ctx.save();
-            ctx.translate(mx, my);
-
-            // Hit Blink Effect (Zelda style)
-            if (m.blink > 0) {
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(-20, -15, 40, 30);
-                m.blink--;
-            } else {
-                if (m.type === 'orc') {
-                    // Giant Crab
-                    ctx.fillStyle = '#b91c1c'; ctx.fillRect(-18, -12, 36, 24);
-                    ctx.fillStyle = '#ef4444'; ctx.fillRect(-18, -12, 36, 4); // Highlight
-                    ctx.fillStyle = '#7f1d1d'; ctx.fillRect(-18, 10, 36, 2); // Shadow
-                    // Claws
-                    ctx.fillStyle = '#b91c1c';
-                    const clawBob = Math.sin(Date.now() * 0.01) * 5;
-                    ctx.fillRect(-25, -10 + clawBob, 10, 10);
-                    ctx.fillRect(15, -10 - clawBob, 10, 10);
-                } else {
-                    // Jellyfish (Pixelized)
-                    ctx.fillStyle = 'rgba(34, 211, 238, 0.8)';
-                    ctx.fillRect(-12, -12, 24, 16);
-                    ctx.fillStyle = '#fff'; ctx.fillRect(-12, -12, 24, 2); // Top glow
-                    // Tentacles
-                    ctx.fillStyle = '#22d3ee';
-                    const tWave = Math.sin(Date.now() * 0.01) * 3;
-                    for (let i = 0; i < 3; i++) {
-                        ctx.fillRect(-8 + i * 8 + tWave, 4, 2, 12);
+                    ctx.fillStyle = 'rgba(255,183,0,1)'; ctx.font = 'bold 10px "VT323", Arial';
+                    ctx.fillText(obj.championId?.toUpperCase() || '', rx, ry - 26 + bobY);
+                    ctx.shadowBlur = 0;
+                }
+                // Health Bar
+                ctx.fillStyle = '#111'; ctx.fillRect(rx - 16, ry - 52 + bobY, 32, 6);
+                ctx.fillStyle = '#ef4444'; ctx.fillRect(rx - 15, ry - 51 + bobY, (obj.hp / obj.maxHp) * 30, 4);
+            } else if (obj.type === 'monster') {
+                ctx.save(); ctx.translate(rx, ry);
+                if (obj.blink > 0) { ctx.fillStyle = '#fff'; ctx.fillRect(-20, -15, 40, 30); obj.blink--; }
+                else {
+                    if (obj.type === 'orc') {
+                        ctx.fillStyle = '#b91c1c'; ctx.fillRect(-18, -12, 36, 24);
+                        ctx.fillStyle = '#ef4444'; ctx.fillRect(-18, -12, 36, 4);
+                        ctx.fillStyle = '#7f1d1d'; ctx.fillRect(-18, 10, 36, 2);
+                        ctx.fillStyle = '#b91c1c'; const clawBob = Math.sin(Date.now() * 0.01) * 5;
+                        ctx.fillRect(-25, -10 + clawBob, 10, 10); ctx.fillRect(15, -10 - clawBob, 10, 10);
+                    } else {
+                        ctx.fillStyle = 'rgba(34, 211, 238, 0.8)'; ctx.fillRect(-12, -12, 24, 16);
+                        ctx.fillStyle = '#fff'; ctx.fillRect(-12, -12, 24, 2);
+                        ctx.fillStyle = '#22d3ee'; const tWave = Math.sin(Date.now() * 0.01) * 3;
+                        for (let i = 0; i < 3; i++) ctx.fillRect(-8 + i * 8 + tWave, 4, 2, 12);
                     }
                 }
+                ctx.restore();
+                ctx.fillStyle = '#111'; ctx.fillRect(rx - 16, ry - 28, 32, 5);
+                ctx.fillStyle = '#ef4444'; ctx.fillRect(rx - 15, ry - 27.5, (obj.hp / obj.maxHp) * 30, 3);
             }
-            ctx.restore();
-            ctx.fillStyle = '#333'; ctx.fillRect(mx - 15, my - 28, 30, 4);
-            ctx.fillStyle = '#ef4444'; ctx.fillRect(mx - 15, my - 28, (m.hp / m.maxHp) * 30, 4);
         });
 
+        // PASS 3: Top Layer (Projectiles, FX)
         projectiles.forEach(p => {
             ctx.fillStyle = p.color || '#ffd700';
             ctx.beginPath(); ctx.arc(p.x + offsetX, p.y + offsetY, p.big ? 8 : 4, 0, Math.PI * 2); ctx.fill();
-            if (p.big) { ctx.strokeStyle = '#fff'; ctx.stroke(); }
         });
 
         if (attackEffect) {
-            // Custom Jaca Attack
+            ctx.save(); ctx.translate(attackEffect.x + offsetX, attackEffect.y + offsetY);
             if (attackEffect.type === 'jaca' && this.jacaAssets?.attack?.complete) {
-                const assets = this.jacaAssets.attack;
-                const sw = assets.width / 3;
-                const sh = assets.height / 5;
+                const assets = this.jacaAssets.attack; const sw = assets.width / 3; const sh = assets.height / 5;
                 const frame = Math.floor((Date.now() - attackEffect.time) / 50) % 3;
-
-                // Map angle to 5 attack rows
                 const dir = (Math.round(attackEffect.angle / (Math.PI / 4)) + 8) % 8;
-                let row = 0; // Down
-                if (dir === 6) row = 2; // Up
-                else if (dir === 4) row = 1; // Left
-                else if (dir === 0) row = 3; // Right
-                else if (dir === 1 || dir === 7) row = 4; // Diagonal?
-
-                ctx.save();
-                ctx.translate(attackEffect.x + offsetX, attackEffect.y + offsetY);
+                let row = 0; if (dir === 6) row = 2; else if (dir === 4) row = 1; else if (dir === 0) row = 3; else if (dir === 1 || dir === 7) row = 4;
                 ctx.drawImage(assets, frame * sw, row * sh, sw, sh, -sw / 2, -sh / 2, sw, sh);
-                ctx.restore();
-                return;
+            } else {
+                ctx.rotate(attackEffect.angle);
+                const gradient = ctx.createLinearGradient(0, 0, 60, 0);
+                gradient.addColorStop(0, 'rgba(255,255,255,0)'); gradient.addColorStop(0.5, 'rgba(255,255,255,0.8)'); gradient.addColorStop(1, 'rgba(255,255,255,0)');
+                ctx.fillStyle = gradient; ctx.beginPath(); ctx.arc(0, 0, 50, -0.8, 0.8); ctx.arc(0, 0, 30, 0.8, -0.8, true); ctx.fill();
             }
-
-            ctx.save();
-            ctx.translate(attackEffect.x + offsetX, attackEffect.y + offsetY);
-            ctx.rotate(attackEffect.angle);
-
-            // Sweeping Zelda Sword Arc
-            const gradient = ctx.createLinearGradient(0, 0, 60, 0);
-            gradient.addColorStop(0, 'rgba(255,255,255,0)');
-            gradient.addColorStop(0.5, 'rgba(255,255,255,0.8)');
-            gradient.addColorStop(1, 'rgba(255,255,255,0)');
-
-            ctx.fillStyle = gradient;
-            ctx.beginPath();
-            ctx.arc(0, 0, 50, -0.8, 0.8);
-            ctx.arc(0, 0, 30, 0.8, -0.8, true);
-            ctx.fill();
-
             ctx.restore();
         }
 
@@ -521,6 +546,7 @@ export class MapRenderer {
             ctx.shadowBlur = 0;
         });
 
+        // Base Logic Box
         const bx = 320 + offsetX; const by = 320 + offsetY;
         ctx.fillStyle = '#7e5109'; ctx.fillRect(bx - 32, by - 32, 64, 64);
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(bx - 32, by - 32, 64, 64);
