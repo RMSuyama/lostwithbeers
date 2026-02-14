@@ -183,9 +183,8 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
             alert('Erro ao iniciar a batalha: ' + error.message);
         } else {
             console.log('Battle start signal sent successfully.');
-            // Optimistic transition for Host
-            isTransitioning.current = true;
-            setInGame(true, me?.champion_id);
+            // Transition is handled by subscription/UPDATE or optimistic navigation
+            setInGame(true);
         }
     };
 

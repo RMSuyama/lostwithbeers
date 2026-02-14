@@ -220,6 +220,42 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 return true;
             });
 
+            // Entity Pushing Physics (Player <-> Monsters)
+            monstersRef.current.forEach(m => {
+                const dx = m.x - myPos.current.x;
+                const dy = m.y - myPos.current.y;
+                const dist = Math.hypot(dx, dy);
+                const combinedRadius = 35; // Player 20 + Monster 15
+                if (dist < combinedRadius && dist > 0) {
+                    const overlap = combinedRadius - dist;
+                    const angle = Math.atan2(dy, dx);
+                    // Push player back slightly, push monster more
+                    myPos.current.x -= Math.cos(angle) * (overlap * 0.3);
+                    myPos.current.y -= Math.sin(angle) * (overlap * 0.3);
+                    m.x += Math.cos(angle) * (overlap * 0.7);
+                    m.y += Math.sin(angle) * (overlap * 0.7);
+                }
+            });
+
+            // Monster <-> Monster pushing
+            for (let i = 0; i < monstersRef.current.length; i++) {
+                for (let j = i + 1; j < monstersRef.current.length; j++) {
+                    const m1 = monstersRef.current[i];
+                    const m2 = monstersRef.current[j];
+                    const dx = m2.x - m1.x;
+                    const dy = m2.y - m1.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist < 30 && dist > 0) {
+                        const overlap = 30 - dist;
+                        const angle = Math.atan2(dy, dx);
+                        m1.x -= Math.cos(angle) * overlap * 0.5;
+                        m1.y -= Math.sin(angle) * overlap * 0.5;
+                        m2.x += Math.cos(angle) * overlap * 0.5;
+                        m2.y += Math.sin(angle) * overlap * 0.5;
+                    }
+                }
+            }
+
             // Damage Numbers
             damageRef.current = damageRef.current
                 .map(d => ({ ...d, anim: d.anim + 1.5 }))
@@ -479,6 +515,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     };
 
     const savePlayerStats = async () => {
+        if (!user?.id) return;
         try {
             await supabase.rpc('update_player_stats', {
                 p_user_id: user?.id,
@@ -491,6 +528,18 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             console.error('Error saving player stats:', error);
         }
     };
+
+    // Auto Cleanup Rooms
+    useEffect(() => {
+        if (!isHost.current) return;
+        const cleanup = setInterval(async () => {
+            const { data: activePlayers } = await supabase.from('players').select('id').eq('room_id', roomId);
+            if (!activePlayers || activePlayers.length === 0) {
+                await supabase.from('rooms').delete().eq('id', roomId);
+            }
+        }, 10000);
+        return () => clearInterval(cleanup);
+    }, [roomId]);
 
     const handleExitToLobby = async () => {
         // Save stats before leaving
@@ -594,11 +643,53 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 <MobileControls
                     onInput={(vKeys) => {
                         activeVirtualKeys.current = vKeys;
-                        if (vKeys.has('q')) useSkill();
-                        if (vKeys.has(' ')) dash();
+                    }}
+                    onAction={(action) => {
+                        if (action === 'attack') basicAttack();
+                        if (action === 'skill') useSkill();
+                        if (action === 'dash') dash();
                     }}
                 />
             )}
+
+            {/* Minimap (showing entities) */}
+            <div style={{
+                position: 'fixed',
+                bottom: '20px',
+                left: '20px',
+                width: '120px',
+                height: '120px',
+                background: 'rgba(0,0,0,0.5)',
+                border: '2px solid rgba(255,255,255,0.3)',
+                zIndex: 50,
+                pointerEvents: 'none'
+            }} className="hide-mobile">
+                <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                    {/* Me */}
+                    <div style={{
+                        position: 'absolute',
+                        left: `${(myPos.current.x / (MAP_WIDTH * TILE_SIZE)) * 100}%`,
+                        top: `${(myPos.current.y / (MAP_HEIGHT * TILE_SIZE)) * 100}%`,
+                        width: '4px', height: '4px', background: '#3b82f6', borderRadius: '50%'
+                    }} />
+                    {/* Monsters */}
+                    {monstersRef.current.map(m => (
+                        <div key={m.id} style={{
+                            position: 'absolute',
+                            left: `${(m.x / (MAP_WIDTH * TILE_SIZE)) * 100}%`,
+                            top: `${(m.y / (MAP_HEIGHT * TILE_SIZE)) * 100}%`,
+                            width: '2px', height: '2px', background: '#ef4444'
+                        }} />
+                    ))}
+                    {/* Base */}
+                    <div style={{
+                        position: 'absolute',
+                        left: `${(BASE_POS.x / (MAP_WIDTH * TILE_SIZE)) * 100}%`,
+                        top: `${(BASE_POS.y / (MAP_HEIGHT * TILE_SIZE)) * 100}%`,
+                        width: '6px', height: '6px', background: '#ffd700', borderRadius: '2px', transform: 'translate(-50%, -50%)'
+                    }} />
+                </div>
+            </div>
         </div>
     );
 };

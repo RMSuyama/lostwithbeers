@@ -4,13 +4,14 @@ import RoomList from './RoomList';
 import ActiveRoom from './ActiveRoom';
 import PlayerStats from './PlayerStats';
 import MusicPlayer from './MusicPlayer';
-import { Sword, Shield, Map, Compass } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Sword, Compass, Shield, Map, LogOut } from 'lucide-react';
 
-const Lobby = ({ setInGame, setRoomId, playerName, setPlayerName, user }) => {
+const Lobby = ({ playerName, setPlayerName, user }) => {
+    const navigate = useNavigate();
     const [rooms, setRooms] = useState([]);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
-    const [activeRoomId, setActiveRoomId] = useState(null);
     const [showStats, setShowStats] = useState(false);
 
     // Initial load and real-time subscription
@@ -126,25 +127,11 @@ const Lobby = ({ setInGame, setRoomId, playerName, setPlayerName, user }) => {
                 }]);
 
             if (error) throw error;
-
-            setActiveRoomId(roomId);
-            setRoomId(roomId);
+            navigate(`/room/${roomId}`);
         } catch (err) {
             alert('Caminho bloqueado! ' + err.message);
         }
     };
-
-    if (activeRoomId) {
-        return (
-            <ActiveRoom
-                roomId={activeRoomId}
-                playerName={playerName}
-                user={user}
-                leaveRoom={() => setActiveRoomId(null)}
-                setInGame={setInGame}
-            />
-        );
-    }
 
     return (
         <div className="lobby-container">
