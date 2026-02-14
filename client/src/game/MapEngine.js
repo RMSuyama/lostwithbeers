@@ -23,7 +23,7 @@ const CHAMPION_SKINS = {
 
         // If JACA and assets are provided, use custom spritesheet
         if (gearType === 'jaca' && assets?.sprite?.complete) {
-            const frame = Math.floor(anim * 10) % 3; // 3 frames per direction
+            const frame = Math.floor(anim * 3) % 3; // Slower transition (3 frames per cycle)
             const spriteSize = 100; // Assuming 100x100 or relative to image
 
             // Map 8-way dir to 4-way rows (0: Up/Back, 1: Down/Front, 2: Left, 3: Right)
@@ -39,13 +39,14 @@ const CHAMPION_SKINS = {
             ctx.fillStyle = 'rgba(0,0,0,0.3)';
             ctx.beginPath(); ctx.ellipse(0, 15, 20, 8, 0, 0, Math.PI * 2); ctx.fill();
 
-            // Slicing Jaca Sprite
+            // Slicing Jaca Sprite - Scaled down for better fit
             const sw = assets.sprite.width / 3;
             const sh = assets.sprite.height / 4;
+            const scale = 0.6; // Scale down 40%
             ctx.drawImage(
                 assets.sprite,
                 frame * sw, row * sh, sw, sh,
-                -sw / 2, -sh + 15, sw, sh
+                -(sw * scale) / 2, -(sh * scale) + 10, sw * scale, sh * scale
             );
             ctx.restore();
             return;
