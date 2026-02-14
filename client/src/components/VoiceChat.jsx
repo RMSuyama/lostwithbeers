@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Peer from 'peerjs';
 import { Mic, MicOff, Headphones, VolumeX } from 'lucide-react';
-import { supabase } from '../../supabaseClient';
+import { supabase } from '../supabaseClient';
 
 const VoiceChat = ({ roomId, userId, playerName, muted = false }) => {
     const [peerId, setPeerId] = useState('');
