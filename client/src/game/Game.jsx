@@ -489,12 +489,13 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 const nextX = Math.max(0, Math.min(MAP_WIDTH * TILE_SIZE, myPos.current.x + mx));
                 const nextY = Math.max(0, Math.min(MAP_HEIGHT * TILE_SIZE, myPos.current.y + my));
 
-                // HARD COLLISION: Environment
+                // SCALE COLLISION: Environment
                 if (engineRef.current) {
                     const gridX = Math.floor(nextX / TILE_SIZE);
                     const gridY = Math.floor(nextY / TILE_SIZE);
-                    if (engineRef.current.mapData.collisions[gridY]?.[gridX]) {
-                        return; // Block movement
+                    const scale = engineRef.current.mapData.scales[gridY]?.[gridX];
+                    if (scale > 0) {
+                        return; // Block movement if scale > 0 (No walking on walls/barriers)
                     }
                 }
 
@@ -659,9 +660,14 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 });
                 break;
             case 'enzo':
-                // Dash
+                // Dash / Blink
                 const ex = myPos.current.x + Math.cos(facingAngle.current) * 300, ey = myPos.current.y + Math.sin(facingAngle.current) * 300;
-                myPos.current.x = Math.max(0, Math.min(MAP_WIDTH * TILE_SIZE, ex)); myPos.current.y = Math.max(0, Math.min(MAP_HEIGHT * TILE_SIZE, ey));
+                const egx = Math.floor(ex / TILE_SIZE), egy = Math.floor(ey / TILE_SIZE);
+                const escale = engineRef.current?.mapData.scales[egy]?.[egx] || 3;
+                if (escale < 3) { // Skill can pass Scale 0, 1, 2. Only Scale 3 (water) blocks.
+                    myPos.current.x = Math.max(0, Math.min(MAP_WIDTH * TILE_SIZE, ex));
+                    myPos.current.y = Math.max(0, Math.min(MAP_HEIGHT * TILE_SIZE, ey));
+                }
                 break;
             case 'mayron':
                 monstersRef.current.forEach(m => {
@@ -692,26 +698,13 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             if (engineRef.current) {
                 const gx = Math.floor(checkX / TILE_SIZE);
                 const gy = Math.floor(checkY / TILE_SIZE);
-                const tile = engineRef.current.mapData.grid[gy]?.[gx];
-                const collision = engineRef.current.mapData.collisions[gy]?.[gx];
+                const scale = engineRef.current.mapData.scales[gy]?.[gx];
 
-                // If it's water, stop BEFORE entering water (naturally)
-                if (tile === 2) { // MURKY_WATER
-                    break;
-                }
+                // Scales 2 & 3 block dash. 
+                if (scale >= 2) break;
 
-                // If it's a wall
-                if (collision) {
-                    // Check if it's the "dashable curve" near base - y in [70, 85], x in [30, 70]
-                    const isCurve = gy >= 70 && gy <= 85 && gx >= 30 && gx <= 70;
-                    if (isCurve) {
-                        // Allow passing through walls in this specific zone
-                        continue;
-                    } else {
-                        // Regular wall - stop
-                        break;
-                    }
-                }
+                // Landing check: cannot land on Scale 1 or higher
+                if (i === steps && scale >= 1) break;
             }
             lastSafeX = checkX;
             lastSafeY = checkY;
@@ -809,9 +802,10 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     </div>
                 </div>
 
-                {/* Minimap */}
+                {/* Minimap - Optimized for Mobile (Compass) */}
                 <div style={{
-                    width: '180px', height: '180px',
+                    width: isMobile ? '120px' : '180px',
+                    height: isMobile ? '120px' : '180px',
                     background: 'rgba(10, 20, 10, 0.9)',
                     border: '3px solid #ffd700',
                     position: 'relative',

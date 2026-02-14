@@ -189,7 +189,8 @@ export const generateMap = (seed = 0) => {
 
     // Start with WATER (everything is blocked unless carved)
     const grid = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(TILE_TYPES.MURKY_WATER));
-    const collisions = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(true));
+    // Scales: 0=Walkable, 1=Dashable Barrier, 2=High Wall (Skills only), 3=Absolute Blocker
+    const scales = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(3));
 
     const drawPath = (x1, y1, x2, y2, width = 8, type = TILE_TYPES.GRASS) => {
         // Simple linear interpolation to draw a thick path
@@ -204,7 +205,7 @@ export const generateMap = (seed = 0) => {
                     const tx = px + wx;
                     if (tx >= 0 && tx < MAP_WIDTH && ty >= 0 && ty < MAP_HEIGHT) {
                         grid[ty][tx] = type;
-                        collisions[ty][tx] = false;
+                        scales[ty][tx] = 0; // Natural paths are level 0
                     }
                 }
             }
@@ -255,20 +256,34 @@ export const generateMap = (seed = 0) => {
                 if (adjLand) {
                     // Create Stone Wall boundary
                     grid[y][x] = TILE_TYPES.STONE_WALL;
-                    collisions[y][x] = true;
+                    scales[y][x] = 2; // Default stone wall is scale 2 (Skill only)
                 }
             }
         }
     }
 
-    // GATES: Open the walls at the very ends of spawn paths to let monsters through
+    // Assign Scale 1 to curved low barriers near base
+    // This allows dashing over the "bend"
+    const centerX = 50, centerY = 82, r = 13;
+    for (let y = 60; y < 95; y++) {
+        for (let x = 20; x < 80; x++) {
+            if (grid[y][x] === TILE_TYPES.STONE_WALL) {
+                const dist = Math.hypot(x - centerX, y - centerY);
+                if (Math.abs(dist - r) < 3) {
+                    scales[y][x] = 1; // Mark as dashable barrier
+                }
+            }
+        }
+    }
+
+    // GATES: Open for monsters (Scale 0)
     const openGate = (gx, gy) => {
         for (let dy = -3; dy <= 3; dy++) {
             for (let dx = -3; dx <= 3; dx++) {
                 const ty = gy + dy, tx = gx + dx;
                 if (grid[ty]?.[tx] === TILE_TYPES.STONE_WALL) {
                     grid[ty][tx] = TILE_TYPES.MURKY_WATER;
-                    collisions[ty][tx] = false; // Monsters can cross water anyway usually
+                    scales[ty][tx] = 0; // Monsters/Players can cross
                 }
             }
         }
