@@ -52,7 +52,8 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const projectilesRef = useRef([]);
     const damageRef = useRef([]);
     const baseHpRef = useRef(1000);
-    const waveStats = useRef({ current: 0, timer: 60, totalMobs: 0, deadMobs: 0 });
+    const walkTimerRef = useRef(0);
+    const lastPosRef = useRef({ x: 400, y: 400 });
     const statsRef = useRef({
         hp: getChamp(championId).hp || 100,
         maxHp: getChamp(championId).hp || 100,
@@ -82,9 +83,16 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         engineRef.current = new MapRenderer(canvasRef.current);
 
         // Load Jaca Assets
-        const jSprite = new Image(); jSprite.src = jacaSprite;
-        const jAttack = new Image(); jAttack.src = jacaAttack;
-        engineRef.current.jacaAssets = { sprite: jSprite, attack: jAttack };
+        const jSprite = new Image();
+        const jAttack = new Image();
+        jSprite.onload = () => {
+            if (engineRef.current) engineRef.current.jacaAssets = { ...engineRef.current.jacaAssets, sprite: jSprite };
+        };
+        jAttack.onload = () => {
+            if (engineRef.current) engineRef.current.jacaAssets = { ...engineRef.current.jacaAssets, attack: jAttack };
+        };
+        jSprite.src = jacaSprite;
+        jAttack.src = jacaAttack;
 
         // Detect Mobile
         setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0);
@@ -169,6 +177,13 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             const now = Date.now();
             const dt = (now - lastTime) / 1000;
             lastTime = now;
+
+            // Animation Timer (Only if moving)
+            const isMoving = Math.hypot(myPos.current.x - lastPosRef.current.x, myPos.current.y - lastPosRef.current.y) > 0.1;
+            if (isMoving) {
+                walkTimerRef.current += dt * 4;
+            }
+            lastPosRef.current = { ...myPos.current };
 
             if (gameState === 'over') return;
 
@@ -336,7 +351,9 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     id: playerName, x: myPos.current.x, y: myPos.current.y,
                     angle: facingAngle.current,
                     name: playerName, color: getChamp(championId).color, championId,
-                    hp: statsRef.current.hp, maxHp: statsRef.current.maxHp, walkTimer: now * 0.005
+                    hp: statsRef.current.hp, maxHp: statsRef.current.maxHp,
+                    walkTimer: walkTimerRef.current,
+                    isMoving: Math.hypot(myPos.current.x - lastPosRef.current.x, myPos.current.y - lastPosRef.current.y) > 0.1
                 };
                 engineRef.current.draw(
                     [...players, me],

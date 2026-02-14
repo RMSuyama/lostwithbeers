@@ -18,20 +18,25 @@ export const TILE_TYPES = {
 
 const CHAMPION_SKINS = {
     // Zelda: Link to the Past style drawer
-    drawSailor: (ctx, x, y, anim, color, angle, gearType, assets = null) => {
+    drawSailor: (ctx, x, y, anim, color, angle, gearType, assets = null, isMoving = true) => {
         const dir = (Math.round(angle / (Math.PI / 4)) + 8) % 8;
 
         // If JACA and assets are provided, use custom spritesheet
         if (gearType === 'jaca' && assets?.sprite?.complete) {
-            const frame = Math.floor(anim * 3) % 3; // Slower transition (3 frames per cycle)
+            // Idle Frame Lock: If not moving, stay on middle frame (1). If moving, cycle 0-2.
+            const frame = isMoving ? (Math.floor(anim * 4) % 3) : 1;
             const spriteSize = 100; // Assuming 100x100 or relative to image
 
             // Map 8-way dir to 4-way rows (0: Up/Back, 1: Down/Front, 2: Left, 3: Right)
             // 0:E, 1:SE, 2:S, 3:SW, 4:W, 5:NW, 6:N, 7:NE (Approx)
+            // Improved Direction Mapping (8-way to 4-row stability)
             let row = 1; // S
             if (dir === 6 || dir === 5 || dir === 7) row = 0; // N
             else if (dir === 4 || dir === 3) row = 2; // W
             else if (dir === 0 || dir === 1) row = 3; // E
+
+            // If the spritesheet actually has 8 rows, we could expand this here.
+            // For now, we ensure stable 4-row mapping to avoid jitter.
 
             ctx.save();
             ctx.translate(x, y);
@@ -39,14 +44,14 @@ const CHAMPION_SKINS = {
             ctx.fillStyle = 'rgba(0,0,0,0.3)';
             ctx.beginPath(); ctx.ellipse(0, 15, 20, 8, 0, 0, Math.PI * 2); ctx.fill();
 
-            // Slicing Jaca Sprite - Scaled down for better fit
+            // Slicing Jaca Sprite - Reduced scale significantly per user request
             const sw = assets.sprite.width / 3;
             const sh = assets.sprite.height / 4;
-            const scale = 0.6; // Scale down 40%
+            const scale = 0.35;
             ctx.drawImage(
                 assets.sprite,
                 frame * sw, row * sh, sw, sh,
-                -(sw * scale) / 2, -(sh * scale) + 10, sw * scale, sh * scale
+                -(sw * scale) / 2, -(sh * scale) + 5, sw * scale, sh * scale
             );
             ctx.restore();
             return;
@@ -149,11 +154,11 @@ const CHAMPION_SKINS = {
         ctx.restore();
     },
 
-    jaca: (ctx, x, y, anim, color, angle, assets) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'jaca', assets),
-    djox: (ctx, x, y, anim, color, angle, assets) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'djox', assets),
-    klebao: (ctx, x, y, anim, color, angle, assets) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'klebao', assets),
-    shiryu: (ctx, x, y, anim, color, angle, assets) => {
-        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets);
+    jaca: (ctx, x, y, anim, color, angle, assets, isMoving = true) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'jaca', assets, isMoving),
+    djox: (ctx, x, y, anim, color, angle, assets, isMoving = true) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'djox', assets, isMoving),
+    klebao: (ctx, x, y, anim, color, angle, assets, isMoving = true) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'klebao', assets, isMoving),
+    shiryu: (ctx, x, y, anim, color, angle, assets, isMoving = true) => {
+        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets, isMoving);
         ctx.save();
         ctx.translate(x, y);
         ctx.strokeStyle = '#059669'; ctx.lineWidth = 2;
@@ -161,14 +166,14 @@ const CHAMPION_SKINS = {
         ctx.beginPath(); ctx.arc(0, -10, 35, 0, Math.PI * 2); ctx.stroke();
         ctx.restore();
     },
-    charles: (ctx, x, y, anim, color, angle, assets) => {
-        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets);
+    charles: (ctx, x, y, anim, color, angle, assets, isMoving = true) => {
+        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets, isMoving);
         ctx.fillStyle = '#451a03'; // Wooden Drum
         ctx.fillRect(x + 18, y - 5, 12, 18);
         ctx.fillStyle = '#92400e';
         ctx.fillRect(x + 18, y - 5, 12, 3);
     },
-    default: (ctx, x, y, anim, color, angle, assets) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets)
+    default: (ctx, x, y, anim, color, angle, assets, isMoving = true) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets, isMoving)
 };
 
 CHAMPION_SKINS.shiryusuyama = CHAMPION_SKINS.shiryu;
@@ -337,7 +342,7 @@ export class MapRenderer {
             ctx.translate(ex, ey + bobY);
             ctx.scale(scaleX, scaleY);
             const skin = CHAMPION_SKINS[entity.championId] || CHAMPION_SKINS.default;
-            skin(ctx, 0, 0, entity.walkTimer || 0, entity.color, entity.angle || 0, this.jacaAssets);
+            skin(ctx, 0, 0, entity.walkTimer || 0, entity.color, entity.angle || 0, this.jacaAssets, entity.isMoving !== undefined ? entity.isMoving : true);
             ctx.restore();
 
             const isMe = entity.id === camera.followId;
