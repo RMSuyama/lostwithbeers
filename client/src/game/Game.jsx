@@ -3,6 +3,7 @@ import { MapRenderer, TILE_SIZE, MAP_WIDTH, MAP_HEIGHT } from './MapEngine';
 import { supabase } from '../supabaseClient';
 import MusicPlayer from '../components/Lobby/MusicPlayer';
 import MobileControls from '../components/MobileControls';
+import VoiceChat from '../components/VoiceChat';
 
 // Assets
 import jacaSprite from '../Jaca, o pirata crocodilo em 8 direções.png';
@@ -60,7 +61,12 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const keys = useRef({});
 
     // Refs for Loop performance & Fresh state
-    const myPos = useRef({ x: BASE_POS.x, y: BASE_POS.y - 100 });
+    // Randomize initial spawn slightly to prevent 10-player stack
+    const initialSpawn = (roomId.charCodeAt(0) % 2 === 0) ? SPAWN_POS_L : SPAWN_POS_R;
+    const myPos = useRef({
+        x: initialSpawn.x + (Math.random() * 60 - 30),
+        y: initialSpawn.y + (Math.random() * 60 - 30)
+    });
     const facingAngle = useRef(0);
     const cameraRef = useRef({ x: BASE_POS.x, y: BASE_POS.y });
     const monstersRef = useRef([]);
@@ -1043,6 +1049,16 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     </button>
                 </div>
             )}
+            )}
+
+            {/* Voice Chat Overlay */}
+            <VoiceChat
+                roomId={roomId}
+                userId={user?.id}
+                playerName={playerName}
+                muted={true} // Default muted
+            />
+
             {/* Next Wave Button (Host Only) */}
             {isHost.current && monstersRef.current.length === 0 && (
                 <button

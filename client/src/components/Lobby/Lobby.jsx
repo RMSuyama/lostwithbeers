@@ -79,8 +79,29 @@ const Lobby = ({ playerName, setPlayerName, user }) => {
         await supabase.auth.signOut();
     };
 
+    const checkAlreadyInRoom = async () => {
+        // Enforce "One Room" Policy via Presence
+        const channel = supabase.channel('online-users');
+        // Retrieve state - this is a bit hacky as we need to wait for sync
+        // Alternatively, check DB 'players' table for active session
+        const { data: activePlayer } = await supabase
+            .from('players')
+            .select('room_id')
+            .eq('user_id', user.id)
+            .single();
+
+        if (activePlayer) {
+            alert('Você já está em uma sala! Saia da outra sessão primeiro.');
+            return true;
+        }
+        return false;
+    };
+
     const createRoom = async () => {
         if (!playerName.trim()) return alert('Herói, identifique-se antes de iniciar sua jornada!');
+        if (await checkAlreadyInRoom()) return;
+
+        const roomName = prompt('Nome da Sala (ex: "Reino dos Bravos"):');
 
         const roomName = prompt('Nome da Sala (ex: "Reino dos Bravos"):');
         if (!roomName?.trim()) return alert('Dê um nome à sua sala!');
@@ -111,13 +132,21 @@ const Lobby = ({ playerName, setPlayerName, user }) => {
 
     const joinRoom = async (roomId, isHost = false) => {
         if (!playerName.trim()) return alert('Herói, identifique-se primeiro!');
+        if (!isHost && await checkAlreadyInRoom()) return; // Host check skipped as they just created it
+
         localStorage.setItem('playerName', playerName);
 
         try {
-            // Check if player already in room to prevent clones (basic cleanup)
-            if (user?.id) {
-                await supabase.from('players').delete().eq('room_id', roomId).eq('user_id', user.id);
-            }
+            // Check room capacity (Max 10)
+            const { count } = await supabase
+                .from('players')
+                .select('*', { count: 'exact', head: true })
+                .eq('room_id', roomId);
+
+            if (count >= 10) return alert('Esta sala está cheia! (Máx: 10)');
+
+            // Remove previous session to be safe (One Room Policy enforcement)
+            await supabase.from('players').delete().eq('user_id', user?.id);
 
             const { error } = await supabase
                 .from('players')
@@ -151,18 +180,30 @@ const Lobby = ({ playerName, setPlayerName, user }) => {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
                     <p className="lobby-subtitle">UMA LENDA DO PORTO DO REINO</p>
-                    <button
-                        onClick={() => setShowStats(!showStats)}
-                        className="btn-primary"
-                        style={{
-                            background: showStats ? '#ef4444' : '#ffd700',
-                            fontSize: '1.2rem',
-                            padding: '5px 15px',
-                            color: '#000'
-                        }}
-                    >
-                        {showStats ? 'FECHAR ESTATÍSTICAS' : 'VER ESTATÍSTICAS'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        {user?.email === 'admin@lwb.com' && (
+                            <button
+                                onClick={() => navigate('/admin')}
+                                className="btn-primary"
+                                style={{ background: '#7c3aed', color: '#fff', fontSize: '1rem', padding: '5px 10px' }}
+                            >
+                                <Shield size={16} style={{ marginRight: '5px' }} />
+                                ADMIN
+                            </button>
+                        )}
+                        <button
+                            onClick={() => setShowStats(!showStats)}
+                            className="btn-primary"
+                            style={{
+                                background: showStats ? '#ef4444' : '#ffd700',
+                                fontSize: '1.2rem',
+                                padding: '5px 15px',
+                                color: '#000'
+                            }}
+                        >
+                            {showStats ? 'FECHAR ESTATÍSTICAS' : 'VER ESTATÍSTICAS'}
+                        </button>
+                    </div>
                 </div>
             </header>
 
