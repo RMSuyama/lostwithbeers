@@ -49,12 +49,12 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const baseHpRef = useRef(1000);
     const waveStats = useRef({ current: 0, timer: 60, totalMobs: 0, deadMobs: 0 });
     const statsRef = useRef({
-        hp: getChamp(championId).hp,
-        maxHp: getChamp(championId).hp,
-        mana: getChamp(championId).mana,
-        maxMana: getChamp(championId).mana,
+        hp: getChamp(championId).hp || 100,
+        maxHp: getChamp(championId).hp || 100,
+        mana: getChamp(championId).mana || 50,
+        maxMana: getChamp(championId).mana || 50,
         atk: 1, // Start DMG 1
-        range: getChamp(championId).basic.range,
+        range: getChamp(championId).basic?.range || 150,
         xp: 0, maxXp: 50, level: 1,
         totalDamage: 0, kills: 0
     });

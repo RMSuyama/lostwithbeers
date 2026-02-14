@@ -10,6 +10,7 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
     const [me, setMe] = useState(null);
     const [room, setRoom] = useState(null);
     const isTransitioning = React.useRef(false);
+    const championIdRef = React.useRef('jaca');
 
     useEffect(() => {
         fetchRoom();
@@ -41,9 +42,9 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
             }, (payload) => {
                 setRoom(payload.new);
                 if (payload.new.status === 'playing') {
-                    console.log('Room status changed to playing. Initiating transition...');
+                    console.log('Room status changed to playing. Initiating transition with champion:', championIdRef.current);
                     isTransitioning.current = true;
-                    setInGame(true);
+                    setInGame(true, championIdRef.current);
                 } else {
                     console.log('Room status changed but not to playing:', payload.new.status);
                 }
@@ -119,6 +120,9 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
 
         setPlayers(playerList);
         setMe(myPlayer);
+        if (myPlayer?.champion_id) {
+            championIdRef.current = myPlayer.champion_id;
+        }
 
         // If I was in a room but my record is gone, leave
         if (playerList.length > 0 && !myPlayer) {
@@ -182,9 +186,9 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
             console.error('Error starting game:', error);
             alert('Erro ao iniciar a batalha: ' + error.message);
         } else {
-            console.log('Battle start signal sent successfully.');
-            // Transition is handled by subscription/UPDATE or optimistic navigation
-            setInGame(true);
+            console.log('Battle start signal sent successfully. Champion:', championIdRef.current);
+            isTransitioning.current = true;
+            setInGame(true, championIdRef.current);
         }
     };
 
@@ -203,7 +207,7 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
                     {me?.is_host && (
                         <div style={{ fontSize: '1rem', color: '#ff4444', border: '1px solid #ff4444', padding: '4px', marginTop: '8px' }}>
                             [DEBUG] HOST: SIM | STATUS: {room?.status} | JOGADORES: {players.length} | PRONTOS: {players.filter(p => p.is_ready).length}
-                            <button onClick={() => { console.log('FORCE START'); isTransitioning.current = true; setInGame(true); }} style={{ marginLeft: '10px', background: 'red', color: 'white' }}>
+                            <button onClick={() => { console.log('FORCE START'); isTransitioning.current = true; setInGame(true, championIdRef.current); }} style={{ marginLeft: '10px', background: 'red', color: 'white' }}>
                                 FORÇAR INÍCIO
                             </button>
                         </div>

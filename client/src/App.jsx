@@ -52,7 +52,7 @@ function App() {
                     </ProtectedRoute>
                 } />
 
-                <Route path="/game/:roomId" element={
+                <Route path="/game/:roomId/:championId" element={
                     <ProtectedRoute session={session}>
                         <GameWrapper session={session} />
                     </ProtectedRoute>
@@ -88,24 +88,23 @@ const ActiveRoomWrapper = ({ session }) => {
             playerName={playerName}
             user={session.user}
             leaveRoom={() => navigate('/lobby')}
-            setInGame={(val) => {
-                if (val) navigate(`/game/${roomId}`);
+            setInGame={(val, champId) => {
+                if (val) navigate(`/game/${roomId}/${champId || 'jaca'}`);
             }}
         />
     );
 };
 
 const GameWrapper = ({ session }) => {
-    const { roomId } = useParams();
+    const { roomId, championId } = useParams();
     const navigate = useNavigate();
     const [playerName] = useState(localStorage.getItem('playerName') || session.user.email?.split('@')[0] || 'Guerreiro');
-    const championId = new URLSearchParams(window.location.search).get('champion');
 
     return (
         <Game
             roomId={roomId}
             playerName={playerName}
-            championId={championId}
+            championId={championId || 'jaca'}
             user={session.user}
             setInGame={(val) => {
                 if (!val) navigate('/lobby');
