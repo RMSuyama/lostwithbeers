@@ -680,8 +680,45 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
 
     const dash = () => {
         const ddist = 140;
-        myPos.current.x = Math.max(0, Math.min(MAP_WIDTH * TILE_SIZE, myPos.current.x + Math.cos(facingAngle.current) * ddist));
-        myPos.current.y = Math.max(0, Math.min(MAP_HEIGHT * TILE_SIZE, myPos.current.y + Math.sin(facingAngle.current) * ddist));
+        const angle = facingAngle.current;
+        const steps = 10;
+        let lastSafeX = myPos.current.x;
+        let lastSafeY = myPos.current.y;
+
+        for (let i = 1; i <= steps; i++) {
+            const checkX = myPos.current.x + Math.cos(angle) * (ddist * (i / steps));
+            const checkY = myPos.current.y + Math.sin(angle) * (ddist * (i / steps));
+
+            if (engineRef.current) {
+                const gx = Math.floor(checkX / TILE_SIZE);
+                const gy = Math.floor(checkY / TILE_SIZE);
+                const tile = engineRef.current.mapData.grid[gy]?.[gx];
+                const collision = engineRef.current.mapData.collisions[gy]?.[gx];
+
+                // If it's water, stop BEFORE entering water (naturally)
+                if (tile === 2) { // MURKY_WATER
+                    break;
+                }
+
+                // If it's a wall
+                if (collision) {
+                    // Check if it's the "dashable curve" near base - y in [70, 85], x in [30, 70]
+                    const isCurve = gy >= 70 && gy <= 85 && gx >= 30 && gx <= 70;
+                    if (isCurve) {
+                        // Allow passing through walls in this specific zone
+                        continue;
+                    } else {
+                        // Regular wall - stop
+                        break;
+                    }
+                }
+            }
+            lastSafeX = checkX;
+            lastSafeY = checkY;
+        }
+
+        myPos.current.x = Math.max(0, Math.min(MAP_WIDTH * TILE_SIZE, lastSafeX));
+        myPos.current.y = Math.max(0, Math.min(MAP_HEIGHT * TILE_SIZE, lastSafeY));
     };
 
     const spawnDamage = (x, y, val) => damageRef.current.push({ x, y, value: Math.floor(val), anim: 0 });
@@ -791,13 +828,30 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                                 position: 'absolute',
                                 left: `${(p.x / (MAP_WIDTH * TILE_SIZE)) * 100}%`,
                                 top: `${(p.y / (MAP_HEIGHT * TILE_SIZE)) * 100}%`,
-                                width: '6px', height: '6px',
-                                background: p.id === playerName ? '#3b82f6' : '#ef4444',
+                                width: '10px', height: '10px',
+                                border: '1px solid #fff',
+                                background: p.id === playerName ? '#3b82f6' : (p.color || '#ef4444'),
                                 borderRadius: '50%',
                                 transform: 'translate(-50%, -50%)',
-                                zIndex: 10
-                            }} />
+                                zIndex: 10,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '6px', color: '#fff', fontWeight: 'bold'
+                            }}>
+                                {p.name.charAt(0).toUpperCase()}
+                            </div>
                         ))}
+                        {/* Me indicator (just in case players list is slow) */}
+                        <div style={{
+                            position: 'absolute',
+                            left: `${(myPos.current.x / (MAP_WIDTH * TILE_SIZE)) * 100}%`,
+                            top: `${(myPos.current.y / (MAP_HEIGHT * TILE_SIZE)) * 100}%`,
+                            width: '8px', height: '8px',
+                            border: '2px solid #fff',
+                            background: '#3b82f6',
+                            borderRadius: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            zIndex: 11
+                        }} />
                         {monstersRef.current.map(m => (
                             <div key={m.id} style={{
                                 position: 'absolute',
@@ -812,6 +866,30 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     </div>
                     <div style={{ position: 'absolute', bottom: '5px', width: '100%', textAlign: 'center', fontSize: '0.8rem', color: '#ffd700', fontWeight: 'bold' }}>BÚSSOLA</div>
                 </div>
+            </div>
+
+            <div style={{ position: 'fixed', bottom: '15px', left: '15px', zIndex: 60 }}>
+                <button
+                    onClick={() => {
+                        if (!document.fullscreenElement) {
+                            document.documentElement.requestFullscreen();
+                        } else {
+                            document.exitFullscreen();
+                        }
+                    }}
+                    style={{
+                        background: 'rgba(0,0,0,0.7)',
+                        border: '2px solid #ffd700',
+                        color: '#ffd700',
+                        padding: '10px',
+                        cursor: 'pointer',
+                        fontFamily: 'VT323',
+                        fontSize: '1rem',
+                        boxShadow: '3px 3px #000'
+                    }}
+                >
+                    FULLSCREEN 📺
+                </button>
             </div>
 
             <div style={{ position: 'fixed', top: '15px', right: '15px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px', zIndex: 10 }}>

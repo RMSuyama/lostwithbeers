@@ -213,26 +213,34 @@ export const generateMap = (seed = 0) => {
 
     // Draw the "U/Y" shape matching the user's drawing
     // Central Hub
-    const hubX = 50, hubY = 65;
+    const hubX = 50, hubY = 60;
 
-    // Draw Land (Grass) first
-    // Bottom Path to Base (Ambev Truck) - Slightly longer and narrower
-    drawPath(hubX, hubY, hubX, 90, 6, TILE_TYPES.GRASS);
-    drawPath(hubX, 88, hubX, 92, 12, TILE_TYPES.FORT_WOOD); // Base Platform
+    // Curved/Circular path system near the base
+    const centerX = 50, centerY = 82, radius = 12;
+    for (let angle = 0; angle < Math.PI * 2; angle += 0.05) {
+        const px = Math.floor(centerX + Math.cos(angle) * (radius + 2));
+        const py = Math.floor(centerY + Math.sin(angle) * radius);
+        drawPath(px, py, px, py, 4, TILE_TYPES.GRASS);
+    }
+    // Connect ring to central hub
+    drawPath(hubX, hubY, centerX, centerY - radius, 5, TILE_TYPES.GRASS);
+
+    // Bottom Base (Ambev Truck)
+    drawPath(hubX, 85, hubX, 95, 12, TILE_TYPES.FORT_WOOD); // Base Platform
 
     // Top-Left Path (Spawn 1) - Longer and narrower
-    drawPath(hubX, hubY, 30, 50, 4, TILE_TYPES.GRASS);
-    drawPath(30, 50, 20, 10, 4, TILE_TYPES.GRASS);
+    drawPath(hubX, hubY, 20, 40, 4, TILE_TYPES.GRASS);
+    drawPath(20, 40, 20, 10, 4, TILE_TYPES.GRASS);
 
     // Top-Right Path (Spawn 2) - Longer and narrower
-    drawPath(hubX, hubY, 70, 50, 4, TILE_TYPES.GRASS);
-    drawPath(70, 50, 80, 10, 4, TILE_TYPES.GRASS);
+    drawPath(hubX, hubY, 80, 40, 4, TILE_TYPES.GRASS);
+    drawPath(80, 40, 80, 10, 4, TILE_TYPES.GRASS);
 
     // Lateral Loops (Circles)
-    drawPath(25, 70, 25, 70, 6, TILE_TYPES.COBBLESTONE);
-    drawPath(75, 70, 75, 70, 6, TILE_TYPES.COBBLESTONE);
-    drawPath(25, 70, hubX, hubY, 3, TILE_TYPES.GRASS);
-    drawPath(75, 70, hubX, hubY, 3, TILE_TYPES.GRASS);
+    drawPath(12, 60, 12, 60, 6, TILE_TYPES.COBBLESTONE);
+    drawPath(88, 60, 88, 60, 6, TILE_TYPES.COBBLESTONE);
+    drawPath(12, 60, hubX, hubY, 3, TILE_TYPES.GRASS);
+    drawPath(88, 60, hubX, hubY, 3, TILE_TYPES.GRASS);
 
     // DRAW STONE WALLS AROUND LAND
     // We scan the grid and place walls on any water tile adjacent to land
