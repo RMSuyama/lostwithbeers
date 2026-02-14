@@ -16,9 +16,14 @@ const CHAMPIONS = {
     kleyiton: { name: 'Kleyiton', color: '#b45309', hp: 110, mana: 90, basic: { range: 160, arc: 1.2, dmg: 18 }, skill: { name: 'Campo Geométrico', cost: 30, cd: 10000 } },
     milan: { name: 'Milan', color: '#4a044e', hp: 70, mana: 160, basic: { range: 190, arc: 2.0, dmg: 14 }, skill: { name: 'Blefe Espectral', cost: 25, cd: 5000 } },
     enzo: { name: 'Enzo', color: '#0369a1', hp: 90, mana: 50, basic: { range: 100, arc: 2.2, dmg: 17 }, skill: { name: 'Riff Elétrico', cost: 12, cd: 3000 } },
-    mayron: { name: 'Mayron', color: '#0d9488', hp: 110, mana: 100, basic: { range: 170, arc: 2.4, dmg: 18 }, skill: { name: 'Corrente de Vento', cost: 25, cd: 6000 } },
+    mayron: { name: 'Mayron', color: '#0d9488', hp: 110, mana: 100, basic: { range: 170, arc: 2.4, dmg: 18 }, skill: { name: 'Tide Wave', cost: 25, cd: 6000 } },
     klebao: { name: 'Klebão', color: '#ffffff', hp: 200, mana: 100, basic: { range: 300, arc: 0.2, dmg: 35, ranged: true }, skill: { name: 'Julgamento Supremo', cost: 50, cd: 12000 } }
 };
+
+// Aliases for retro-compatibility
+CHAMPIONS.shiryusuyama = CHAMPIONS.shiryu;
+CHAMPIONS.rafarofa = CHAMPIONS.charles; // Charles replaced Rafarofa in some versions
+const getChamp = (id) => CHAMPIONS[id] || CHAMPIONS.jaca;
 
 const BASE_POS = { x: 320, y: 320 };
 const SPAWN_POS = { x: 3000, y: 3000 };
@@ -44,12 +49,12 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const baseHpRef = useRef(1000);
     const waveStats = useRef({ current: 0, timer: 60, totalMobs: 0, deadMobs: 0 });
     const statsRef = useRef({
-        hp: CHAMPIONS[championId]?.hp || 100,
-        maxHp: CHAMPIONS[championId]?.hp || 100,
-        mana: CHAMPIONS[championId]?.mana || 50,
-        maxMana: CHAMPIONS[championId]?.mana || 50,
+        hp: getChamp(championId).hp,
+        maxHp: getChamp(championId).hp,
+        mana: getChamp(championId).mana,
+        maxMana: getChamp(championId).mana,
         atk: 1, // Start DMG 1
-        range: CHAMPIONS[championId]?.basic?.range || 150,
+        range: getChamp(championId).basic.range,
         xp: 0, maxXp: 50, level: 1,
         totalDamage: 0, kills: 0
     });
@@ -113,7 +118,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     payload: {
                         id: playerName, x: myPos.current.x, y: myPos.current.y,
                         angle: facingAngle.current,
-                        name: playerName, color: CHAMPIONS[championId].color, championId,
+                        name: playerName, color: getChamp(championId).color, championId,
                         hp: statsRef.current.hp, maxHp: statsRef.current.maxHp,
                         totalDamage: statsRef.current.totalDamage, kills: statsRef.current.kills
                     }
@@ -282,7 +287,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 const me = {
                     id: playerName, x: myPos.current.x, y: myPos.current.y,
                     angle: facingAngle.current,
-                    name: playerName, color: CHAMPIONS[championId].color, championId,
+                    name: playerName, color: getChamp(championId).color, championId,
                     hp: statsRef.current.hp, maxHp: statsRef.current.maxHp, walkTimer: now * 0.005
                 };
                 engineRef.current.draw(
@@ -388,7 +393,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     }, [championId, gameState, showEscMenu]);
 
     const basicAttack = () => {
-        const champ = CHAMPIONS[championId];
+        const champ = getChamp(championId);
         const angle = facingAngle.current;
         const levelBonus = 1 + (statsRef.current.level * 0.2);
         const dmg = champ.basic.dmg * levelBonus;
@@ -420,7 +425,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     };
 
     const useSkill = () => {
-        const champ = CHAMPIONS[championId];
+        const champ = getChamp(championId);
         if (statsRef.current.mana < champ.skill.cost) return;
         statsRef.current.mana -= champ.skill.cost;
         const levelBonus = 1 + (statsRef.current.level * 0.25);
@@ -638,7 +643,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             </div>
 
             <div style={{ position: 'fixed', bottom: '15px', left: '15px', pointerEvents: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <div style={{ color: '#ffd700', fontSize: '1.6rem' }}>LV {uiStats.level} {playerName.toUpperCase()} ({CHAMPIONS[championId].name})</div>
+                <div style={{ color: '#ffd700', fontSize: '1.6rem' }}>LV {uiStats.level} {playerName.toUpperCase()} ({getChamp(championId).name})</div>
                 <div style={{ width: '200px', height: '20px', background: '#222', border: '3px solid #fff', position: 'relative' }}>
                     <div style={{ width: `${(uiStats.hp / uiStats.maxHp) * 100}%`, height: '100%', background: '#ef4444' }} />
                     <div style={{ position: 'absolute', inset: 0, textAlign: 'center', color: '#fff' }}>{Math.ceil(uiStats.hp)} HP</div>
@@ -661,7 +666,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', maxWidth: '800px', width: '90%', background: '#111', border: '4px solid #ffd700', padding: '25px', boxShadow: '10px 10px #000' }}>
                         <div style={{ textAlign: 'left', borderRight: '2px solid #333', paddingRight: '20px' }}>
                             <h2 style={{ color: '#ffd700', borderBottom: '2px solid #ffd700', marginBottom: '15px' }}>SEUS STATUS</h2>
-                            <p>CAMPEÃO: {CHAMPIONS[championId].name}</p>
+                            <p>CAMPEÃO: {getChamp(championId).name}</p>
                             <p>NÍVEL: {uiStats.level}</p>
                             <p>ABATES: {statsRef.current.kills}</p>
                             <p>DANO: {Math.floor(statsRef.current.totalDamage)}</p>

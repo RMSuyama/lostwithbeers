@@ -474,6 +474,9 @@ const CHAMPION_SKINS = {
     }
 };
 
+CHAMPION_SKINS.shiryusuyama = CHAMPION_SKINS.shiryu;
+CHAMPION_SKINS.rafarofa = CHAMPION_SKINS.charles;
+
 export const generateMap = () => {
     const grid = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(TILE_TYPES.GRASS));
     const collisions = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(false));
