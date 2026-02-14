@@ -4,6 +4,7 @@ import { supabase } from './supabaseClient';
 import Lobby from './components/Lobby/Lobby';
 import ActiveRoom from './components/Lobby/ActiveRoom';
 import Auth from './components/Auth/Auth';
+import AdminPanel from './components/Admin/AdminPanel';
 import Game from './game/Game';
 import './index.css';
 
@@ -29,6 +30,36 @@ function App() {
         return () => subscription.unsubscribe();
     }, []);
 
+    // Global Presence Tracking for "One Room" Policy & Admin Monitoring
+    useEffect(() => {
+        if (!session?.user) return;
+
+        const roomChannel = supabase.channel('online-users');
+        const userStatus = {
+            user_id: session.user.id,
+            email: session.user.email,
+            name: localStorage.getItem('playerName') || session.user.email.split('@')[0],
+            online_at: new Date().toISOString(),
+            room_id: 'Lobby' // Default, updated by Game/ActiveRoom
+        };
+
+        roomChannel
+            .on('presence', { event: 'sync' }, () => {
+                // We can use this to detect if *I* am connected elsewhere
+                // const state = roomChannel.presenceState();
+                // ... logic to prevent duplicate tabs ...
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await roomChannel.track(userStatus);
+                }
+            });
+
+        return () => {
+            supabase.removeChannel(roomChannel);
+        };
+    }, [session]);
+
     if (loading) return (
         <div style={{ background: '#0b1a0b', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffd700', fontFamily: 'VT323', fontSize: '2rem' }}>
             CARREGANDO REINO...
@@ -43,6 +74,12 @@ function App() {
                 <Route path="/lobby" element={
                     <ProtectedRoute session={session}>
                         <LobbyWrapper session={session} />
+                    </ProtectedRoute>
+                } />
+
+                <Route path="/admin" element={
+                    <ProtectedRoute session={session}>
+                        <AdminPanel session={session} />
                     </ProtectedRoute>
                 } />
 

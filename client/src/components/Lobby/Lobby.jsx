@@ -179,10 +179,20 @@ const Lobby = ({ playerName, setPlayerName, user }) => {
                                 <input
                                     type="text"
                                     className="hero-text-input"
-                                    placeholder="Link?"
                                     value={playerName}
                                     onChange={(e) => setPlayerName(e.target.value)}
+                                    disabled={true}
+                                    style={{
+                                        cursor: 'not-allowed',
+                                        opacity: 0.7,
+                                        border: '2px solid #555',
+                                        background: 'rgba(0,0,0,0.5)',
+                                        color: '#aaa'
+                                    }}
                                 />
+                                <div style={{ fontSize: '0.8rem', color: '#ffd700', marginTop: '4px', opacity: 0.8, textAlign: 'center' }}>
+                                    Vinculado a: {user?.email}
+                                </div>
                                 <button
                                     onClick={createRoom}
                                     disabled={creating}

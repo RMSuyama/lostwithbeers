@@ -191,6 +191,8 @@ export const generateMap = (seed = 0) => {
     const grid = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(TILE_TYPES.MURKY_WATER));
     // Scales: 0=Walkable, 1=Dashable Barrier, 2=High Wall (Skills only), 3=Absolute Blocker
     const scales = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(3));
+    // Collisions: Simple boolean (true = blocked for walking) - Kept for legacy compatibility
+    const collisions = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(true));
 
     const drawPath = (x1, y1, x2, y2, width = 8, type = TILE_TYPES.GRASS) => {
         // Simple linear interpolation to draw a thick path
@@ -206,6 +208,7 @@ export const generateMap = (seed = 0) => {
                     if (tx >= 0 && tx < MAP_WIDTH && ty >= 0 && ty < MAP_HEIGHT) {
                         grid[ty][tx] = type;
                         scales[ty][tx] = 0; // Natural paths are level 0
+                        collisions[ty][tx] = false; // Walkable
                     }
                 }
             }
@@ -313,6 +316,7 @@ export const generateMap = (seed = 0) => {
                     // Create Stone Wall boundary
                     grid[y][x] = TILE_TYPES.STONE_WALL;
                     scales[y][x] = 2; // Default stone wall is scale 2 (Skill only)
+                    collisions[y][x] = true;
                 }
             }
         }
@@ -327,6 +331,7 @@ export const generateMap = (seed = 0) => {
                 const dist = Math.hypot(x - centerX, y - centerY);
                 if (Math.abs(dist - r) < 3) {
                     scales[y][x] = 1; // Mark as dashable barrier
+                    collisions[y][x] = true; // Still blocks walking
                 }
             }
         }
@@ -340,6 +345,7 @@ export const generateMap = (seed = 0) => {
                 if (grid[ty]?.[tx] === TILE_TYPES.STONE_WALL) {
                     grid[ty][tx] = TILE_TYPES.MURKY_WATER;
                     scales[ty][tx] = 0; // Monsters/Players can cross
+                    collisions[ty][tx] = false;
                 }
             }
         }
@@ -353,11 +359,12 @@ export const generateMap = (seed = 0) => {
         const ry = Math.floor(rnd() * MAP_HEIGHT);
         if (grid[ry][rx] === TILE_TYPES.GRASS) {
             grid[ry][rx] = TILE_TYPES.CARGO_CRATE;
+            scales[ry][rx] = 2; // Treat crate as high wall (Scale 2)
             collisions[ry][rx] = true;
         }
     }
 
-    return { grid, collisions };
+    return { grid, scales, collisions };
 };
 
 export class MapRenderer {
@@ -540,10 +547,33 @@ export class MapRenderer {
         }
 
         damageNumbers.forEach(d => {
-            ctx.fillStyle = '#ffd700'; ctx.font = 'bold 20px VT323'; ctx.textAlign = 'center';
-            ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
-            ctx.fillText(d.value, d.x + offsetX, d.y + offsetY - d.anim);
-            ctx.shadowBlur = 0;
+            const life = d.anim / 60; // 0 to 1
+            const alpha = life > 0.7 ? 1 - (life - 0.7) * 3.3 : 1; // Fade out in last 30%
+            const lift = d.anim * 1.5; // Rise speed
+
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, alpha);
+            ctx.translate(d.x + offsetX, d.y + offsetY - lift);
+
+            // Pop effect for first 10 frames
+            if (d.anim < 10) {
+                const scale = 1 + Math.sin(d.anim * 0.15) * 0.5;
+                ctx.scale(scale, scale);
+            }
+
+            // Outline logic based on color (Red for crit/high dmg, White for normal)
+            const isCrit = typeof d.value === 'string' || d.value > 100;
+            ctx.fillStyle = d.color || '#fff';
+            ctx.font = isCrit ? 'bold 24px "VT323", Arial' : 'bold 20px "VT323", Arial';
+            ctx.textAlign = 'center';
+
+            // Heavy stroke for visibility (Ragnarok style)
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#000';
+            ctx.strokeText(d.value, 0, 0);
+            ctx.fillText(d.value, 0, 0);
+
+            ctx.restore();
         });
 
         // Base Logic Box
