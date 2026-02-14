@@ -426,8 +426,8 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             keys.current[key] = true;
             if (gameState !== 'playing' || showEscMenu) return;
             // Attack and skills (only on press)
-            if (key === 'a') basicAttack();
-            if (['q', 'w', 'e', 'r'].includes(key)) useSkill();
+            if (key === 'q') basicAttack();
+            if (['1', '2', '3', '4'].includes(key)) useSkill();
             if (key === ' ') dash();
         };
         const handleKeyUp = (e) => keys.current[e.key.toLowerCase()] = false;
@@ -438,10 +438,10 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             const vKeys = activeVirtualKeys.current;
             const k = keys.current;
 
-            if (k['arrowup'] || vKeys.has('ArrowUp')) my -= speed;
-            if (k['arrowdown'] || vKeys.has('ArrowDown')) my += speed;
-            if (k['arrowleft'] || vKeys.has('ArrowLeft')) mx -= speed;
-            if (k['arrowright'] || vKeys.has('ArrowRight')) mx += speed;
+            if (k['arrowup'] || k['w'] || vKeys.has('ArrowUp')) my -= speed;
+            if (k['arrowdown'] || k['s'] || vKeys.has('ArrowDown')) my += speed;
+            if (k['arrowleft'] || k['a'] || vKeys.has('ArrowLeft')) mx -= speed;
+            if (k['arrowright'] || k['d'] || vKeys.has('ArrowRight')) mx += speed;
 
             if (mx !== 0 || my !== 0) {
                 const nextX = Math.max(0, Math.min(MAP_WIDTH * TILE_SIZE, myPos.current.x + mx));
@@ -803,7 +803,10 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             </div>
 
             <div className="hide-mobile" style={{ position: 'fixed', bottom: '15px', right: '15px', display: 'flex', gap: '8px' }}>
-                {['Q', 'W', 'E', 'R'].map(k => (
+                <div style={{ width: '45px', height: '45px', border: '3px solid #ffd700', background: 'rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                    <span style={{ fontSize: '0.7rem' }}>Q</span><span style={{ fontSize: '0.8rem' }}>HIT</span>
+                </div>
+                {['1', '2', '3', '4'].map(k => (
                     <div key={k} style={{ width: '45px', height: '45px', border: '3px solid #ffd700', background: 'rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
                         <span style={{ fontSize: '0.7rem' }}>{k}</span><span style={{ fontSize: '0.8rem' }}>SKILL</span>
                     </div>
