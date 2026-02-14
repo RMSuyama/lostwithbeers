@@ -217,14 +217,14 @@ export const generateMap = (seed = 0) => {
     const hubX = 50, hubY = 60;
 
     // Curved/Circular path system near the base
-    const centerX = 50, centerY = 82, radius = 12;
+    const baseCX = 50, baseCY = 82, radius = 12;
     for (let angle = 0; angle < Math.PI * 2; angle += 0.05) {
-        const px = Math.floor(centerX + Math.cos(angle) * (radius + 2));
-        const py = Math.floor(centerY + Math.sin(angle) * radius);
+        const px = Math.floor(baseCX + Math.cos(angle) * (radius + 2));
+        const py = Math.floor(baseCY + Math.sin(angle) * radius);
         drawPath(px, py, px, py, 4, TILE_TYPES.GRASS);
     }
     // Connect ring to central hub
-    drawPath(hubX, hubY, centerX, centerY - radius, 5, TILE_TYPES.GRASS);
+    drawPath(hubX, hubY, baseCX, baseCY - radius, 5, TILE_TYPES.GRASS);
 
     // Bottom Base (Ambev Truck)
     drawPath(hubX, 85, hubX, 95, 12, TILE_TYPES.FORT_WOOD); // Base Platform

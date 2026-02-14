@@ -486,21 +486,38 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             if (right) mx += speed;
 
             if (mx !== 0 || my !== 0) {
-                const nextX = Math.max(0, Math.min(MAP_WIDTH * TILE_SIZE, myPos.current.x + mx));
-                const nextY = Math.max(0, Math.min(MAP_HEIGHT * TILE_SIZE, myPos.current.y + my));
+                const stepX = mx;
+                const stepY = my;
 
-                // SCALE COLLISION: Environment
+                let finalX = myPos.current.x;
+                let finalY = myPos.current.y;
+
                 if (engineRef.current) {
-                    const gridX = Math.floor(nextX / TILE_SIZE);
-                    const gridY = Math.floor(nextY / TILE_SIZE);
-                    const scale = engineRef.current.mapData.scales[gridY]?.[gridX];
-                    if (scale > 0) {
-                        return; // Block movement if scale > 0 (No walking on walls/barriers)
+                    const sc = engineRef.current.mapData.scales;
+                    if (sc) {
+                        // Try X movement separately
+                        const nextX = Math.max(0, Math.min(MAP_WIDTH * TILE_SIZE, myPos.current.x + stepX));
+                        const gridX_X = Math.floor(nextX / TILE_SIZE);
+                        const gridY_X = Math.floor(myPos.current.y / TILE_SIZE);
+                        if ((sc[gridY_X]?.[gridX_X] || 0) === 0) {
+                            finalX = nextX;
+                        }
+
+                        // Try Y movement separately
+                        const nextY = Math.max(0, Math.min(MAP_HEIGHT * TILE_SIZE, myPos.current.y + stepY));
+                        const gridX_Y = Math.floor(finalX / TILE_SIZE);
+                        const gridY_Y = Math.floor(nextY / TILE_SIZE);
+                        if ((sc[gridY_Y]?.[gridX_Y] || 0) === 0) {
+                            finalY = nextY;
+                        }
                     }
+                } else {
+                    finalX = Math.max(0, Math.min(MAP_WIDTH * TILE_SIZE, myPos.current.x + stepX));
+                    finalY = Math.max(0, Math.min(MAP_HEIGHT * TILE_SIZE, myPos.current.y + stepY));
                 }
 
-                myPos.current.x = nextX;
-                myPos.current.y = nextY;
+                myPos.current.x = finalX;
+                myPos.current.y = finalY;
                 facingAngle.current = Math.atan2(my, mx);
             }
         }, 16);
@@ -698,12 +715,12 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             if (engineRef.current) {
                 const gx = Math.floor(checkX / TILE_SIZE);
                 const gy = Math.floor(checkY / TILE_SIZE);
-                const scale = engineRef.current.mapData.scales[gy]?.[gx];
+                const scale = engineRef.current.mapData.scales[gy]?.[gx] ?? 3;
 
-                // Scales 2 & 3 block dash. 
+                // Scale 2 (Wall) & 3 (Water) block dash trajectory
                 if (scale >= 2) break;
 
-                // Landing check: cannot land on Scale 1 or higher
+                // Scale 1 (Low Barrier) allows passing through, but NOT landing on it
                 if (i === steps && scale >= 1) break;
             }
             lastSafeX = checkX;
