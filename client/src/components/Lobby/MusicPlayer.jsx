@@ -78,7 +78,9 @@ const MusicPlayer = () => {
 
     return (
         <>
-            <div id="youtube-player" style={{ width: '0', height: '0', overflow: 'hidden', position: 'fixed' }}></div>
+            <div style={{ position: 'fixed', width: 0, height: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+                <div id="youtube-player"></div>
+            </div>
 
             {/* Compact Music Icon */}
             {!isExpanded && (

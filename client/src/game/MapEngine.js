@@ -17,134 +17,157 @@ export const TILE_TYPES = {
 };
 
 const CHAMPION_SKINS = {
-    // Helper for nautical themed humanoids
-    drawSailor: (ctx, x, y, anim, color, angle, gearType) => {
+    // Zelda: Link to the Past style drawer
+    drawSailor: (ctx, x, y, anim, color, angle, gearType, assets = null) => {
         const dir = (Math.round(angle / (Math.PI / 4)) + 8) % 8;
+
+        // If JACA and assets are provided, use custom spritesheet
+        if (gearType === 'jaca' && assets?.sprite?.complete) {
+            const frame = Math.floor(anim * 10) % 3; // 3 frames per direction
+            const spriteSize = 100; // Assuming 100x100 or relative to image
+
+            // Map 8-way dir to 4-way rows (0: Up/Back, 1: Down/Front, 2: Left, 3: Right)
+            // 0:E, 1:SE, 2:S, 3:SW, 4:W, 5:NW, 6:N, 7:NE (Approx)
+            let row = 1; // S
+            if (dir === 6 || dir === 5 || dir === 7) row = 0; // N
+            else if (dir === 4 || dir === 3) row = 2; // W
+            else if (dir === 0 || dir === 1) row = 3; // E
+
+            ctx.save();
+            ctx.translate(x, y);
+            // Draw shadow first
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath(); ctx.ellipse(0, 15, 20, 8, 0, 0, Math.PI * 2); ctx.fill();
+
+            // Slicing Jaca Sprite
+            const sw = assets.sprite.width / 3;
+            const sh = assets.sprite.height / 4;
+            ctx.drawImage(
+                assets.sprite,
+                frame * sw, row * sh, sw, sh,
+                -sw / 2, -sh + 15, sw, sh
+            );
+            ctx.restore();
+            return;
+        }
+
         const isBack = dir === 5 || dir === 6 || dir === 7;
-        const speed = anim ? 1 : 0;
-        const bob = speed * Math.sin(anim * 10) * 4;
-        const sway = speed * Math.cos(anim * 5) * 0.1;
+        const isSide = dir === 2 || dir === 6;
+        const walk = Math.sin(anim * 12);
+        const bob = Math.abs(walk) * 2;
 
         ctx.save();
-        ctx.translate(x, y + bob);
-        ctx.rotate(sway);
+        ctx.translate(x, y);
 
-        // Legs/Boots
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(-10, 10, 8, 12); ctx.fillRect(2, 10, 8, 12);
+        // SHADOW
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath(); ctx.ellipse(0, 15, 12, 5, 0, 0, Math.PI * 2); ctx.fill();
 
-        // Torso (Striped Sailor Shirt)
-        ctx.fillStyle = '#f8fafc';
-        ctx.beginPath(); ctx.roundRect(-14, -10, 28, 22, 4); ctx.fill();
-        ctx.strokeStyle = '#1d4ed8'; ctx.lineWidth = 2; // Blue stripes
-        for (let i = 0; i < 3; i++) {
-            ctx.beginPath(); ctx.moveTo(-14, -6 + i * 6); ctx.lineTo(14, -6 + i * 6); ctx.stroke();
+        ctx.translate(0, -bob);
+
+        // LEGS (Pixel Style)
+        ctx.fillStyle = '#1e293b'; // Pants
+        const legH = 8;
+        if (anim > 0) {
+            ctx.fillRect(-8, 10 + walk * 4, 6, legH);
+            ctx.fillRect(2, 10 - walk * 4, 6, legH);
+        } else {
+            ctx.fillRect(-8, 10, 6, legH);
+            ctx.fillRect(2, 10, 6, legH);
         }
-        ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.strokeRect(-14, -10, 28, 22);
 
-        // Arms
+        // BODY (Shaded Sailor Shirt)
+        const shirtColor = '#f8fafc';
+        const shadeColor = '#cbd5e1';
+        ctx.fillStyle = shirtColor;
+        ctx.fillRect(-12, -8, 24, 20);
+        // Shading on side/bottom
+        ctx.fillStyle = shadeColor;
+        ctx.fillRect(8, -8, 4, 20); // Right shade
+        ctx.fillRect(-12, 8, 24, 4); // Bottom shade
+
+        // Stripes (Pixel perfect)
+        ctx.fillStyle = '#1d4ed8';
+        for (let i = 0; i < 3; i++) {
+            ctx.fillRect(-12, -4 + i * 5, 24, 2);
+        }
+
+        // ARMS
         ctx.fillStyle = '#fdbaf8'; // Skin
-        const armWave = speed * Math.sin(anim * 10) * 10;
-        ctx.fillRect(-22, -8 + armWave, 8, 15);
-        ctx.fillRect(14, -8 - armWave, 8, 15);
+        const armSwing = anim > 0 ? walk * 6 : 0;
+        if (!isSide) {
+            ctx.fillRect(-18, -4 + armSwing, 6, 12); // Left
+            ctx.fillRect(12, -4 - armSwing, 6, 12); // Right
+        } else {
+            // One arm hidden or both visible depending on side
+            ctx.fillRect(dir === 2 ? 8 : -14, -4 + armSwing, 6, 14);
+        }
 
-        // Head
-        ctx.beginPath(); ctx.arc(0, -22, 12, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        // HEAD
+        ctx.fillStyle = '#fdbaf8';
+        ctx.fillRect(-10, -26, 20, 20); // Square head for pixel look
+        // Cheeks/Shade
+        ctx.fillStyle = '#f9a8d4';
+        ctx.fillRect(-10, -12, 20, 4);
 
-        // Hat (Sailor Cap)
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(0, -32, 10, Math.PI, 0); ctx.fill(); ctx.stroke();
-
-        // Face
+        // EYES (Link to the Past style)
         if (!isBack) {
             ctx.fillStyle = '#000';
-            const ex = (dir === 0 || dir === 4) ? 0 : (dir < 4 ? 4 : -4);
-            ctx.beginPath(); ctx.arc(-5 + ex, -24, 2, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(5 + ex, -24, 2, 0, Math.PI * 2); ctx.fill();
-            // Beard/Stubble for sailors
-            ctx.strokeStyle = '#475569'; ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.arc(0, -18, 5, 0, Math.PI); ctx.stroke();
+            const eyeX = (dir === 0 || dir === 4) ? 0 : (dir < 4 ? 3 : -3);
+            ctx.fillRect(-5 + eyeX, -20, 2, 4);
+            ctx.fillRect(3 + eyeX, -20, 2, 4);
+            // Detail: Eye white pixel
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(-5 + eyeX, -20, 1, 1);
+            ctx.fillRect(3 + eyeX, -20, 1, 1);
         }
 
-        // UNIQUE GEAR
+        // HAT
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(-12, -32, 24, 8);
+        ctx.fillStyle = '#e2e8f0'; // Hat top shade
+        ctx.fillRect(-12, -32, 24, 2);
+
+        // GEAR
+        ctx.lineWidth = 2;
         if (gearType === 'jaca') {
-            ctx.fillStyle = '#166534'; // Gator tail
-            ctx.beginPath(); ctx.moveTo(-10, 5); ctx.lineTo(-25, 20); ctx.lineTo(-10, 15); ctx.fill(); ctx.stroke();
-        } else if (gearType === 'djox') {
-            ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 4;
-            ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(30, 20); ctx.stroke(); // Hook/Anchor
+            ctx.fillStyle = '#15803d'; // Darker green
+            ctx.fillRect(-22, 0, 10, 10); // Tail nub
+            ctx.fillStyle = '#16a34a'; // Light green highlights
+            ctx.fillRect(-22, 0, 4, 4);
         } else if (gearType === 'klebao') {
-            // White Flip-flop in hand
+            // The Mighty White Flip-Flop
             ctx.fillStyle = '#fff';
-            ctx.beginPath(); ctx.ellipse(22, -5 - armWave, 6, 12, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-            ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.moveTo(18, -10 - armWave); ctx.lineTo(22, -5 - armWave); ctx.lineTo(26, -10 - armWave); ctx.stroke();
+            const fx = 16, fy = 0 - armSwing;
+            ctx.fillRect(fx, fy, 8, 14);
+            ctx.fillStyle = '#3b82f6'; // Blue straps
+            ctx.fillRect(fx + 2, fy + 2, 4, 1);
+            ctx.fillRect(fx + 3, fy + 3, 2, 4);
         }
 
         ctx.restore();
     },
 
-    jaca: (ctx, x, y, anim, color, angle) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'jaca'),
-    djox: (ctx, x, y, anim, color, angle) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'djox'),
-    klebao: (ctx, x, y, anim, color, angle) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'klebao'),
-
-    // Fallbacks for others with Porto theme
-    brunao: (ctx, x, y, anim, color, angle) => {
-        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle);
-        ctx.fillStyle = '#facc15'; ctx.fillRect(x - 15, y - 15, 30, 30); // Heavy yellow coat
+    jaca: (ctx, x, y, anim, color, angle, assets) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'jaca', assets),
+    djox: (ctx, x, y, anim, color, angle, assets) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'djox', assets),
+    klebao: (ctx, x, y, anim, color, angle, assets) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'klebao', assets),
+    shiryu: (ctx, x, y, anim, color, angle, assets) => {
+        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets);
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.strokeStyle = '#059669'; ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.arc(0, -10, 35, 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
     },
-    shiryu: (ctx, x, y, anim, color, angle) => {
-        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle);
-        ctx.strokeStyle = '#059669'; ctx.lineWidth = 4;
-        ctx.beginPath(); ctx.arc(x, y - 20, 25, 0, Math.PI * 2); ctx.stroke(); // Emerald aura
+    charles: (ctx, x, y, anim, color, angle, assets) => {
+        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets);
+        ctx.fillStyle = '#451a03'; // Wooden Drum
+        ctx.fillRect(x + 18, y - 5, 12, 18);
+        ctx.fillStyle = '#92400e';
+        ctx.fillRect(x + 18, y - 5, 12, 3);
     },
-    charles: (ctx, x, y, anim, color, angle) => {
-        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle);
-        ctx.fillStyle = '#1e293b'; ctx.fillRect(x - 25, y + 10, 50, 15); // Floating Drum
-    },
-    gusto: (ctx, x, y, anim, color, angle) => {
-        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle);
-        ctx.fillStyle = '#10b981'; ctx.beginPath(); ctx.arc(x - 20, y, 8, 0, Math.PI * 2); ctx.fill(); // Potion
-    },
-    kleyiton: (ctx, x, y, anim, color, angle) => {
-        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle);
-        ctx.strokeStyle = '#06b6d4'; ctx.strokeRect(x - 20, y - 30, 40, 40); // Tech visor/frame
-    },
-    milan: (ctx, x, y, anim, color, angle) => {
-        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle);
-        ctx.fillStyle = '#fff'; ctx.fillRect(x + 15, y, 10, 14); // Cards
-    },
-    enzo: (ctx, x, y, anim, color, angle) => {
-        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle);
-        ctx.fillStyle = '#ef4444'; ctx.fillRect(x - 20, y - 10, 40, 5); // Guitar
-    },
-    mayron: (ctx, x, y, anim, color, angle) => {
-        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle);
-        ctx.strokeStyle = '#14b8a6'; ctx.beginPath(); ctx.moveTo(x - 20, y + 20); ctx.lineTo(x + 20, y - 20); ctx.stroke(); // Chains
-    },
-    jubarbie: (ctx, x, y, anim, color, angle) => {
-        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle);
-        ctx.fillStyle = '#3b82f6'; ctx.beginPath(); ctx.ellipse(x, y + 10, 25, 15, 0, 0, Math.PI * 2); ctx.fill(); // Whale tail
-    },
-    default: (ctx, x, y, anim, color, angle) => {
-        const dir = (Math.round(angle / (Math.PI / 4)) + 8) % 8;
-        const isBack = dir === 6 || dir === 5 || dir === 7;
-
-        ctx.lineWidth = 5; ctx.strokeStyle = '#000';
-        ctx.fillStyle = color || '#ffd700';
-
-        // Body (Bobbing during walk)
-        const bob = Math.sin(anim * 8) * 3;
-        ctx.beginPath(); ctx.ellipse(x, y + bob, 18, 20, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-
-        // Eyes based on direction
-        if (!isBack) {
-            ctx.fillStyle = '#000';
-            const ex = (dir === 0 || dir === 4) ? 0 : (dir < 4 ? 6 : -6);
-            ctx.beginPath(); ctx.arc(x - 6 + ex, y - 4 + bob, 3, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(x + 6 + ex, y - 4 + bob, 3, 0, Math.PI * 2); ctx.fill();
-        }
-    }
+    default: (ctx, x, y, anim, color, angle, assets) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets)
 };
 
 CHAMPION_SKINS.shiryusuyama = CHAMPION_SKINS.shiryu;
@@ -243,19 +266,50 @@ export class MapRenderer {
         for (let y = Math.max(0, startY); y < Math.min(MAP_HEIGHT, endY); y++) {
             for (let x = Math.max(0, startX); x < Math.min(MAP_WIDTH, endX); x++) {
                 const tileType = this.mapData.grid[y][x];
-                const screenX = x * TILE_SIZE + offsetX;
-                const screenY = y * TILE_SIZE + offsetY;
-                ctx.fillStyle = this.colors[tileType];
-                ctx.fillRect(Math.floor(screenX), Math.floor(screenY), TILE_SIZE, TILE_SIZE);
+                const screenX = Math.floor(x * TILE_SIZE + offsetX);
+                const screenY = Math.floor(y * TILE_SIZE + offsetY);
 
-                // Texture details
+                // Base Color
+                ctx.fillStyle = this.colors[tileType];
+                ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+
+                // Zelda Textures (Enhanced visibility)
                 if (tileType === TILE_TYPES.COBBLESTONE) {
+                    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+                    ctx.fillRect(screenX + 2, screenY + 2, TILE_SIZE - 4, TILE_SIZE - 4);
                     ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
-                    ctx.strokeRect(Math.floor(screenX), Math.floor(screenY), TILE_SIZE, TILE_SIZE);
+                    ctx.strokeRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                } else if (tileType === TILE_TYPES.GRASS) {
+                    ctx.fillStyle = '#1e3a1a';
+                    const seed = (x * 13 + y * 7) % 5;
+                    if (seed > 2) ctx.fillRect(screenX + 10, screenY + 10, 2, 4);
+                    if (seed > 3) ctx.fillRect(screenX + 20, screenY + 18, 2, 4);
                 } else if (tileType === TILE_TYPES.CARGO_CRATE) {
-                    ctx.strokeStyle = '#431407'; ctx.lineWidth = 3;
-                    ctx.strokeRect(Math.floor(screenX) + 4, Math.floor(screenY) + 4, TILE_SIZE - 8, TILE_SIZE - 8);
-                    ctx.beginPath(); ctx.moveTo(screenX + 4, screenY + 4); ctx.lineTo(screenX + TILE_SIZE - 4, screenY + TILE_SIZE - 4); ctx.stroke();
+                    // Make it VERY visible
+                    ctx.fillStyle = '#92400e'; ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = '#431407'; ctx.lineWidth = 4;
+                    ctx.strokeRect(screenX + 2, screenY + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                    ctx.beginPath();
+                    ctx.moveTo(screenX, screenY); ctx.lineTo(screenX + TILE_SIZE, screenY + TILE_SIZE);
+                    ctx.moveTo(screenX + TILE_SIZE, screenY); ctx.lineTo(screenX, screenY + TILE_SIZE);
+                    ctx.stroke();
+                } else if (tileType === TILE_TYPES.STONE_WALL) {
+                    ctx.fillStyle = '#64748b'; ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+                    ctx.strokeRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                    // Brick pattern
+                    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                    ctx.fillRect(screenX, screenY + 8, 16, 2);
+                    ctx.fillRect(screenX + 16, screenY + 16, 16, 2);
+                } else if (tileType === TILE_TYPES.MURKY_WATER) {
+                    // Water ripples
+                    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                    ctx.beginPath();
+                    const wTimer = Date.now() * 0.002;
+                    const wx = screenX + (x * 7 + y * 3) % 20;
+                    const wy = screenY + (x * 3 + y * 11) % 20;
+                    ctx.arc(wx + 5, wy + 5, 2 + Math.sin(wTimer) * 2, 0, Math.PI * 2);
+                    ctx.stroke();
                 }
             }
         }
@@ -282,7 +336,7 @@ export class MapRenderer {
             ctx.translate(ex, ey + bobY);
             ctx.scale(scaleX, scaleY);
             const skin = CHAMPION_SKINS[entity.championId] || CHAMPION_SKINS.default;
-            skin(ctx, 0, 0, entity.walkTimer || 0, entity.color, entity.angle || 0);
+            skin(ctx, 0, 0, entity.walkTimer || 0, entity.color, entity.angle || 0, this.jacaAssets);
             ctx.restore();
 
             const isMe = entity.id === camera.followId;
@@ -304,28 +358,40 @@ export class MapRenderer {
             const my = m.y + offsetY;
 
             // SEA MOBS
-            if (m.type === 'orc') {
-                // Giant Crab
-                ctx.fillStyle = '#b91c1c'; ctx.lineWidth = 3; ctx.strokeStyle = '#450a0a';
-                ctx.beginPath(); ctx.ellipse(mx, my, 20, 15, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                // Claws
-                ctx.beginPath(); ctx.arc(mx - 20, my - 10, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-                ctx.beginPath(); ctx.arc(mx + 20, my - 10, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            // SEA MOBS (Pixel Shaded)
+            ctx.save();
+            ctx.translate(mx, my);
+
+            // Hit Blink Effect (Zelda style)
+            if (m.blink > 0) {
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(-20, -15, 40, 30);
+                m.blink--;
             } else {
-                // Jellyfish / Slime
-                ctx.globalAlpha = 0.7;
-                ctx.fillStyle = '#22d3ee'; ctx.strokeStyle = '#0891b2';
-                ctx.beginPath(); ctx.arc(mx, my, 16, Math.PI, 0); ctx.lineTo(mx + 16, my + 10); ctx.lineTo(mx - 16, my + 10); ctx.closePath(); ctx.fill(); ctx.stroke();
-                // Tentacles
-                const wave = Math.sin(Date.now() * 0.01) * 5;
-                ctx.beginPath();
-                for (let i = 0; i < 3; i++) {
-                    ctx.moveTo(mx - 10 + i * 10, my + 10);
-                    ctx.lineTo(mx - 10 + i * 10 + wave, my + 25);
+                if (m.type === 'orc') {
+                    // Giant Crab
+                    ctx.fillStyle = '#b91c1c'; ctx.fillRect(-18, -12, 36, 24);
+                    ctx.fillStyle = '#ef4444'; ctx.fillRect(-18, -12, 36, 4); // Highlight
+                    ctx.fillStyle = '#7f1d1d'; ctx.fillRect(-18, 10, 36, 2); // Shadow
+                    // Claws
+                    ctx.fillStyle = '#b91c1c';
+                    const clawBob = Math.sin(Date.now() * 0.01) * 5;
+                    ctx.fillRect(-25, -10 + clawBob, 10, 10);
+                    ctx.fillRect(15, -10 - clawBob, 10, 10);
+                } else {
+                    // Jellyfish (Pixelized)
+                    ctx.fillStyle = 'rgba(34, 211, 238, 0.8)';
+                    ctx.fillRect(-12, -12, 24, 16);
+                    ctx.fillStyle = '#fff'; ctx.fillRect(-12, -12, 24, 2); // Top glow
+                    // Tentacles
+                    ctx.fillStyle = '#22d3ee';
+                    const tWave = Math.sin(Date.now() * 0.01) * 3;
+                    for (let i = 0; i < 3; i++) {
+                        ctx.fillRect(-8 + i * 8 + tWave, 4, 2, 12);
+                    }
                 }
-                ctx.stroke();
-                ctx.globalAlpha = 1.0;
             }
+            ctx.restore();
             ctx.fillStyle = '#333'; ctx.fillRect(mx - 15, my - 28, 30, 4);
             ctx.fillStyle = '#ef4444'; ctx.fillRect(mx - 15, my - 28, (m.hp / m.maxHp) * 30, 4);
         });
@@ -337,8 +403,45 @@ export class MapRenderer {
         });
 
         if (attackEffect) {
-            ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 4;
-            ctx.beginPath(); ctx.arc(attackEffect.x + offsetX, attackEffect.y + offsetY, 60, attackEffect.angle - 0.5, attackEffect.angle + 0.5); ctx.stroke();
+            // Custom Jaca Attack
+            if (attackEffect.type === 'jaca' && this.jacaAssets?.attack?.complete) {
+                const assets = this.jacaAssets.attack;
+                const sw = assets.width / 3;
+                const sh = assets.height / 5;
+                const frame = Math.floor((Date.now() - attackEffect.time) / 50) % 3;
+
+                // Map angle to 5 attack rows
+                const dir = (Math.round(attackEffect.angle / (Math.PI / 4)) + 8) % 8;
+                let row = 0; // Down
+                if (dir === 6) row = 2; // Up
+                else if (dir === 4) row = 1; // Left
+                else if (dir === 0) row = 3; // Right
+                else if (dir === 1 || dir === 7) row = 4; // Diagonal?
+
+                ctx.save();
+                ctx.translate(attackEffect.x + offsetX, attackEffect.y + offsetY);
+                ctx.drawImage(assets, frame * sw, row * sh, sw, sh, -sw / 2, -sh / 2, sw, sh);
+                ctx.restore();
+                return;
+            }
+
+            ctx.save();
+            ctx.translate(attackEffect.x + offsetX, attackEffect.y + offsetY);
+            ctx.rotate(attackEffect.angle);
+
+            // Sweeping Zelda Sword Arc
+            const gradient = ctx.createLinearGradient(0, 0, 60, 0);
+            gradient.addColorStop(0, 'rgba(255,255,255,0)');
+            gradient.addColorStop(0.5, 'rgba(255,255,255,0.8)');
+            gradient.addColorStop(1, 'rgba(255,255,255,0)');
+
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, 50, -0.8, 0.8);
+            ctx.arc(0, 0, 30, 0.8, -0.8, true);
+            ctx.fill();
+
+            ctx.restore();
         }
 
         damageNumbers.forEach(d => {

@@ -199,8 +199,8 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
         <div className="active-room-container">
             <header className="active-room-header">
                 <div>
-                    <h1 className="lobby-title" style={{ fontSize: '1.8rem' }}>
-                        {room?.name || 'ENTRANDO...'}
+                    <h1 className="lobby-title" style={{ fontSize: '1.8rem', color: '#ffd700' }}>
+                        LWB - Lost with Beers
                     </h1>
                     <p style={{ color: '#deb887', fontSize: '1.1rem', marginTop: '-5px' }}>REINO ID: {roomId.substring(0, 8).toUpperCase()}</p>
                     {/* Debug Info for Host */}

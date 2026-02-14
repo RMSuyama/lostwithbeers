@@ -4,6 +4,10 @@ import { supabase } from '../supabaseClient';
 import MusicPlayer from '../components/Lobby/MusicPlayer';
 import MobileControls from '../components/MobileControls';
 
+// Assets
+import jacaSprite from '../Jaca, o pirata crocodilo em 8 direções.png';
+import jacaAttack from '../Ataques do crocodilo com espada.png';
+
 // Champion Configuration - Porto Cast Roster
 const CHAMPIONS = {
     jaca: { name: 'Jaca', color: '#15803d', hp: 100, mana: 40, basic: { range: 80, arc: 1.6, dmg: 1 }, skill: { name: 'Death Roll', cost: 15, cd: 4000 } },
@@ -75,6 +79,11 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         setIsMounted(true);
         if (!canvasRef.current) return;
         engineRef.current = new MapRenderer(canvasRef.current);
+
+        // Load Jaca Assets
+        const jSprite = new Image(); jSprite.src = jacaSprite;
+        const jAttack = new Image(); jAttack.src = jacaAttack;
+        engineRef.current.jacaAssets = { sprite: jSprite, attack: jAttack };
 
         // Detect Mobile
         setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0);
@@ -427,6 +436,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         };
     }, [championId, gameState, showEscMenu]);
 
+
     const basicAttack = () => {
         const champ = getChamp(championId);
         const angle = facingAngle.current;
@@ -449,7 +459,9 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 while (diff < -Math.PI) diff += Math.PI * 2;
                 while (diff > Math.PI) diff -= Math.PI * 2;
                 if (Math.abs(diff) < champ.basic.arc / 2) {
-                    m.hp -= dmg; statsRef.current.totalDamage += dmg; spawnDamage(m.x, m.y, dmg);
+                    m.hp -= dmg; statsRef.current.totalDamage += dmg;
+                    m.blink = 5; // Hit feedback
+                    spawnDamage(m.x, m.y, dmg);
                     if (champ.basic.kb) {
                         m.x += Math.cos(targetAngle) * champ.basic.kb; m.y += Math.sin(targetAngle) * champ.basic.kb;
                     }
@@ -473,6 +485,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     if (d < 120) {
                         const sdmg = 65 * levelBonus;
                         m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg);
+                        m.blink = 8;
                         m.x += (Math.random() - 0.5) * 60;
                     }
                 });
@@ -483,6 +496,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     if (d < 180) {
                         const sdmg = 90 * levelBonus;
                         m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg);
+                        m.blink = 8;
                         m.x += (dx / d) * 120; m.y += (dy / d) * 120;
                     }
                 });
@@ -510,6 +524,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     if (Math.hypot(m.x - myPos.current.x, m.y - myPos.current.y) < 250) {
                         const sdmg = 70 * levelBonus;
                         m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg, '#064e3b');
+                        m.blink = 7;
                     }
                 });
                 break;
@@ -519,6 +534,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     if (Math.hypot(m.x - myPos.current.x, m.y - myPos.current.y) < 350) {
                         const sdmg = 45 * levelBonus;
                         m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg, '#475569');
+                        m.blink = 5;
                         const ang = Math.atan2(m.y - myPos.current.y, m.x - myPos.current.x);
                         m.x += Math.cos(ang) * 100; m.y += Math.sin(ang) * 100;
                     }
@@ -535,6 +551,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     if (d < 300) {
                         const sdmg = 55 * levelBonus;
                         m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg, '#c084fc');
+                        m.blink = 6;
                         const ang = Math.atan2(m.y - myPos.current.y, m.x - myPos.current.x);
                         m.x += Math.cos(ang) * 50; m.y += Math.sin(ang) * 50;
                     }
@@ -547,6 +564,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     if (d < 400) {
                         const sdmg = 200 * levelBonus;
                         m.hp -= sdmg; statsRef.current.totalDamage += sdmg;
+                        m.blink = 15;
                         spawnDamage(m.x, m.y, "TAPA SECO!", "#ffffff");
                         spawnDamage(m.x, m.y - 20, sdmg, "#ef4444");
                         m.speed = 0; // Stun
@@ -574,6 +592,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     if (d < 280) {
                         const sdmg = 65 * levelBonus;
                         m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg, '#0d9488');
+                        m.blink = 8;
                         m.x -= (dx / d) * 180; m.y -= (dy / d) * 180;
                     }
                 });
@@ -607,13 +626,11 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const savePlayerStats = async () => {
         if (!user?.id) return;
         try {
-            await supabase.rpc('update_player_stats', {
-                p_user_id: user?.id,
-                p_kills: statsRef.current.kills,
-                p_damage: Math.floor(statsRef.current.totalDamage),
-                p_wave: waveStats.current.current,
-                p_champion_id: championId
-            });
+            // Direct update to players table instead of RPC to avoid 404
+            await supabase.from('players').update({
+                kills: statsRef.current.kills,
+                damage: Math.floor(statsRef.current.totalDamage)
+            }).eq('room_id', roomId).eq('name', playerName);
         } catch (error) {
             console.error('Error saving player stats:', error);
         }
@@ -664,27 +681,99 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 </div>
             )}
 
-            <div style={{ position: 'fixed', top: '15px', right: '15px', background: 'rgba(0,0,0,0.85)', border: '3px solid #ffd700', padding: '10px', color: '#fff', textAlign: 'right', zIndex: 10 }}>
-                <div style={{ fontSize: '1.6rem', color: '#ffd700' }}>WAVE {waveUi.current}</div>
-                <div style={{ fontSize: '1rem' }}>ALVOS: {waveUi.dead} / {waveUi.total}</div>
-                {waveUi.timer > 0 && <div style={{ fontSize: '1.2rem', color: '#ef4444' }}>COOLDOWN: {Math.ceil(waveUi.timer)}s</div>}
-                {isHost.current && waveUi.timer > 0 && <button onClick={() => waveStats.current.timer = 0} style={{ background: '#ffd700', border: 'none', padding: '5px 10px', marginTop: '6px', fontFamily: 'VT323', cursor: 'pointer' }}>PULAR »</button>}
+            {/* HUD: Top Left - Status then Map */}
+            <div style={{ position: 'fixed', top: '15px', left: '15px', display: 'flex', flexDirection: 'column', gap: '15px', zIndex: 50 }}>
+                {/* Status Bar */}
+                <div style={{ background: 'rgba(0,0,0,0.8)', border: '3px solid #ffd700', padding: '10px', minWidth: '220px', boxShadow: '5px 5px #000' }}>
+                    <div style={{ color: '#ffd700', fontSize: '1.6rem', marginBottom: '8px' }}>LV {uiStats.level} {playerName.toUpperCase()} ({getChamp(championId).name})</div>
+                    <div style={{ width: '100%', height: '24px', background: '#222', border: '2px solid #fff', position: 'relative', marginBottom: '8px' }}>
+                        <div style={{ width: `${(uiStats.hp / uiStats.maxHp) * 100}%`, height: '100%', background: '#ef4444', transition: 'width 0.3s' }} />
+                        <div style={{ position: 'absolute', inset: 0, textAlign: 'center', color: '#fff', fontSize: '1rem', lineHeight: '20px' }}>{Math.ceil(uiStats.hp)} HP</div>
+                    </div>
+                    <div style={{ width: '100%', height: '12px', background: '#222', border: '2px solid #fff' }}>
+                        <div style={{ width: `${(uiStats.mana / uiStats.maxMana) * 100}%`, height: '100%', background: '#3b82f6', transition: 'width 0.3s' }} />
+                    </div>
+                </div>
+
+                {/* Minimap */}
+                <div style={{
+                    width: '180px', height: '180px',
+                    background: 'rgba(10, 20, 10, 0.9)',
+                    border: '3px solid #ffd700',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    boxShadow: '5px 5px #000',
+                    pointerEvents: 'none'
+                }}>
+                    <div style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0.3 }}>
+                        {/* Static Obstacles on Minimap */}
+                        {engineRef.current?.mapData?.grid.map((row, y) =>
+                            row.map((tile, x) => (
+                                (tile === 2 || tile === 3 || tile === 5) && (
+                                    <div key={`${x}-${y}`} style={{
+                                        position: 'absolute',
+                                        left: `${x}%`,
+                                        top: `${y}%`,
+                                        width: '1%', height: '1%',
+                                        background: tile === 2 ? '#0ea5e9' : (tile === 5 ? '#92400e' : '#475569')
+                                    }} />
+                                )
+                            ))
+                        )}
+                    </div>
+                    <div style={{ position: 'absolute', width: '100%', height: '100%' }}>
+                        {players.map(p => (
+                            <div key={p.id} style={{
+                                position: 'absolute',
+                                left: `${(p.x / (MAP_WIDTH * TILE_SIZE)) * 100}%`,
+                                top: `${(p.y / (MAP_HEIGHT * TILE_SIZE)) * 100}%`,
+                                width: '6px', height: '6px',
+                                background: p.id === cameraRef.current.followId ? '#3b82f6' : '#ef4444',
+                                borderRadius: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                zIndex: 10
+                            }} />
+                        ))}
+                        {monsters.map(m => (
+                            <div key={m.id} style={{
+                                position: 'absolute',
+                                left: `${(m.x / (MAP_WIDTH * TILE_SIZE)) * 100}%`,
+                                top: `${(m.y / (MAP_HEIGHT * TILE_SIZE)) * 100}%`,
+                                width: '4px', height: '4px',
+                                background: '#ffd700',
+                                transform: 'translate(-50%, -50%)',
+                                zIndex: 5
+                            }} />
+                        ))}
+                    </div>
+                    <div style={{ position: 'absolute', bottom: '5px', width: '100%', textAlign: 'center', fontSize: '0.8rem', color: '#ffd700', fontWeight: 'bold' }}>BÚSSOLA</div>
+                </div>
             </div>
 
-            <div style={{ position: 'fixed', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.7)', border: '3px solid #fff', padding: '6px 20px', textAlign: 'center' }}>
-                <div style={{ color: '#fff', fontSize: '1.2rem', marginBottom: '4px' }}>HP DO BAR: {Math.ceil(waveUi.baseHp)} / 1000</div>
-                <div style={{ width: '250px', height: '12px', background: '#333' }}><div style={{ width: `${(waveUi.baseHp / 1000) * 100}%`, height: '100%', background: '#22c55e' }} /></div>
-            </div>
+            <div style={{ position: 'fixed', top: '15px', right: '15px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px', zIndex: 10 }}>
+                <div style={{ background: 'rgba(0,0,0,0.85)', border: '3px solid #ffd700', padding: '10px', color: '#fff', textAlign: 'right', boxShadow: '4px 4px #000' }}>
+                    <div style={{ fontSize: '1.6rem', color: '#ffd700' }}>WAVE {waveUi.current}</div>
+                    <div style={{ fontSize: '1rem' }}>ALVOS: {waveUi.dead} / {waveUi.total}</div>
+                    {waveUi.timer > 0 && <div style={{ fontSize: '1.2rem', color: '#ef4444' }}>PRÓXIMA ONDA EM: {Math.ceil(waveUi.timer)}s</div>}
+                    {isHost.current && waveUi.timer > 0 && <button onClick={() => waveStats.current.timer = 0} style={{ background: '#ffd700', border: 'none', padding: '5px 10px', marginTop: '6px', fontFamily: 'VT323', cursor: 'pointer', fontWeight: 'bold' }}>PULAR »</button>}
+                </div>
 
-            <div style={{ position: 'fixed', bottom: '15px', left: '15px', pointerEvents: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <div style={{ color: '#ffd700', fontSize: '1.6rem' }}>LV {uiStats.level} {playerName.toUpperCase()} ({getChamp(championId).name})</div>
-                <div style={{ width: '200px', height: '20px', background: '#222', border: '3px solid #fff', position: 'relative' }}>
-                    <div style={{ width: `${(uiStats.hp / uiStats.maxHp) * 100}%`, height: '100%', background: '#ef4444' }} />
-                    <div style={{ position: 'absolute', inset: 0, textAlign: 'center', color: '#fff' }}>{Math.ceil(uiStats.hp)} HP</div>
-                </div>
-                <div style={{ width: '150px', height: '12px', background: '#222', border: '2px solid #fff' }}>
-                    <div style={{ width: `${(uiStats.mana / uiStats.maxMana) * 100}%`, height: '100%', background: '#3b82f6' }} />
-                </div>
+                {/* Settings Toggle moved here to avoid overlap */}
+                <button
+                    onClick={() => setShowSettings(!showSettings)}
+                    style={{
+                        background: 'rgba(0,0,0,0.7)',
+                        border: '2px solid #ffd700',
+                        color: '#ffd700',
+                        padding: '10px 20px',
+                        cursor: 'pointer',
+                        fontFamily: 'VT323',
+                        fontSize: '1.2rem',
+                        boxShadow: '3px 3px #000'
+                    }}
+                >
+                    SETTINGS ⚙️
+                </button>
             </div>
 
             <div className="hide-mobile" style={{ position: 'fixed', bottom: '15px', right: '15px', display: 'flex', gap: '8px' }}>
@@ -728,25 +817,6 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             {/* Music Player */}
             {settings.showMusicBtn && <MusicPlayer />}
 
-            {/* Settings Toggle */}
-            <button
-                onClick={() => setShowSettings(!showSettings)}
-                style={{
-                    position: 'fixed',
-                    top: '10px',
-                    right: '10px',
-                    background: 'rgba(0,0,0,0.6)',
-                    border: '1px solid #ffd700',
-                    color: '#ffd700',
-                    padding: '8px',
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                    zIndex: 200,
-                    fontFamily: 'VT323'
-                }}
-            >
-                SETTINGS
-            </button>
 
             {/* Settings Modal */}
             {showSettings && (
@@ -825,44 +895,6 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 />
             )}
 
-            {/* Minimap (showing entities) */}
-            <div style={{
-                position: 'fixed',
-                bottom: '20px',
-                left: '20px',
-                width: '120px',
-                height: '120px',
-                background: 'rgba(0,0,0,0.5)',
-                border: '2px solid rgba(255,255,255,0.3)',
-                zIndex: 50,
-                pointerEvents: 'none'
-            }} className="hide-mobile">
-                <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                    {/* Me */}
-                    <div style={{
-                        position: 'absolute',
-                        left: `${(myPos.current.x / (MAP_WIDTH * TILE_SIZE)) * 100}%`,
-                        top: `${(myPos.current.y / (MAP_HEIGHT * TILE_SIZE)) * 100}%`,
-                        width: '4px', height: '4px', background: '#3b82f6', borderRadius: '50%'
-                    }} />
-                    {/* Monsters */}
-                    {monstersRef.current.map(m => (
-                        <div key={m.id} style={{
-                            position: 'absolute',
-                            left: `${(m.x / (MAP_WIDTH * TILE_SIZE)) * 100}%`,
-                            top: `${(m.y / (MAP_HEIGHT * TILE_SIZE)) * 100}%`,
-                            width: '2px', height: '2px', background: '#ef4444'
-                        }} />
-                    ))}
-                    {/* Base */}
-                    <div style={{
-                        position: 'absolute',
-                        left: `${(BASE_POS.x / (MAP_WIDTH * TILE_SIZE)) * 100}%`,
-                        top: `${(BASE_POS.y / (MAP_HEIGHT * TILE_SIZE)) * 100}%`,
-                        width: '6px', height: '6px', background: '#ffd700', borderRadius: '2px', transform: 'translate(-50%, -50%)'
-                    }} />
-                </div>
-            </div>
         </div>
     );
 };

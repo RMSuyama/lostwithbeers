@@ -139,7 +139,7 @@ const Lobby = ({ playerName, setPlayerName, user }) => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
                     <div className="logo-container">
                         <Sword className="icon-gold" size={64} />
-                        <h1 className="lobby-title">Defense of the Bar</h1>
+                        <h1 className="lobby-title">LWB - Lost With Beers</h1>
                     </div>
                     <button onClick={handleLogout} className="btn-primary" style={{ height: 'fit-content', background: '#333' }}>
                         LOGOUT
