@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { MapRenderer, TILE_SIZE, MAP_WIDTH, MAP_HEIGHT } from './MapEngine';
 import { supabase } from '../supabaseClient';
 import MusicPlayer from '../components/Lobby/MusicPlayer';
+import MobileControls from '../components/MobileControls';
 
 // Champion Configuration - Porto Cast Roster
 const CHAMPIONS = {
@@ -28,7 +29,9 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const [isMounted, setIsMounted] = useState(false);
     const [gameState, setGameState] = useState('playing'); // playing, dead, over, victory
     const [showEscMenu, setShowEscMenu] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
     const isHost = useRef(false);
+    const activeVirtualKeys = useRef(new Set());
 
     // Refs for Loop performance & Fresh state
     const myPos = useRef({ x: 400, y: 400 });
@@ -57,6 +60,9 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         setIsMounted(true);
         if (!canvasRef.current) return;
         engineRef.current = new MapRenderer(canvasRef.current);
+
+        // Detect Mobile
+        setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
         const resize = () => {
             canvasRef.current.width = window.innerWidth;
@@ -308,10 +314,13 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         const moveLoop = setInterval(() => {
             if (gameState !== 'playing' || showEscMenu) return;
             const speed = 5; let mx = 0, my = 0;
-            if (keys['arrowup']) my -= speed;
-            if (keys['arrowdown']) my += speed;
-            if (keys['arrowleft']) mx -= speed;
-            if (keys['arrowright']) mx += speed;
+            const vKeys = activeVirtualKeys.current;
+
+            if (keys['arrowup'] || vKeys.has('ArrowUp')) my -= speed;
+            if (keys['arrowdown'] || vKeys.has('ArrowDown')) my += speed;
+            if (keys['arrowleft'] || vKeys.has('ArrowLeft')) mx -= speed;
+            if (keys['arrowright'] || vKeys.has('ArrowRight')) mx += speed;
+
             if (mx !== 0 || my !== 0) {
                 myPos.current.x = Math.max(0, Math.min(MAP_WIDTH * TILE_SIZE, myPos.current.x + mx));
                 myPos.current.y = Math.max(0, Math.min(MAP_HEIGHT * TILE_SIZE, myPos.current.y + my));
@@ -539,7 +548,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 </div>
             </div>
 
-            <div style={{ position: 'fixed', bottom: '15px', right: '15px', display: 'flex', gap: '8px' }}>
+            <div className="hide-mobile" style={{ position: 'fixed', bottom: '15px', right: '15px', display: 'flex', gap: '8px' }}>
                 <div style={{ width: '45px', height: '45px', border: '3px solid #ffd700', background: 'rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
                     <span style={{ fontSize: '0.7rem' }}>Q</span><span style={{ fontSize: '0.8rem' }}>SKILL</span>
                 </div>
@@ -579,6 +588,17 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
 
             {/* Music Player */}
             <MusicPlayer />
+
+            {/* Mobile Controls */}
+            {isMobile && (
+                <MobileControls
+                    onInput={(vKeys) => {
+                        activeVirtualKeys.current = vKeys;
+                        if (vKeys.has('q')) useSkill();
+                        if (vKeys.has(' ')) dash();
+                    }}
+                />
+            )}
         </div>
     );
 };

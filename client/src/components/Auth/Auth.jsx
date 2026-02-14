@@ -31,7 +31,7 @@ const Auth = () => {
 
     return (
         <div className="lobby-container" style={{ justifyContent: 'center' }}>
-            <div className="panel-zelda" style={{ maxWidth: '400px' }}>
+            <div className="panel-zelda" style={{ maxWidth: '400px', width: '90%' }}>
                 <div className="card-header">
                     <Lock size={32} />
                     <span>{isSignUp ? 'NOVO HERÓI' : 'IDENTIFIQUE-SE'}</span>

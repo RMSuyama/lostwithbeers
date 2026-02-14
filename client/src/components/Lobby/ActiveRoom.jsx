@@ -210,19 +210,19 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
                         </div>
                     )}
                 </div>
-                <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
                     {me?.is_host && (
-                        <button onClick={randomizeTeams} className="btn-primary">
+                        <button onClick={randomizeTeams} className="btn-primary" style={{ padding: '0.4rem 0.8rem' }}>
                             SORTEAR TIMES
                         </button>
                     )}
-                    <button onClick={leaveRoom} className="btn-primary" style={{ background: '#451010' }}>
-                        <LogOut size={24} style={{ marginRight: '8px' }} /> ABANDONAR
+                    <button onClick={leaveRoom} className="btn-primary" style={{ background: '#451010', padding: '0.4rem 0.8rem' }}>
+                        <LogOut size={20} style={{ marginRight: '8px' }} /> ABANDONAR
                     </button>
                 </div>
             </header>
 
-            <div style={{ display: 'flex', flex: 1, width: '100%', maxWidth: '80rem', gap: '1.5rem', overflow: 'hidden' }}>
+            <div className="active-room-main-layout" style={{ display: 'flex', flex: 1, width: '100%', maxWidth: '80rem', gap: '1.5rem', overflow: 'hidden' }}>
                 <main style={{ flex: 1, overflowY: 'auto' }}>
                     <div className="panel-zelda" style={{ marginBottom: '2rem' }}>
                         <ChampionPicker onSelect={selectChampion} selectedId={me?.champion_id} />
@@ -257,7 +257,7 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
                         </div>
                     </div>
 
-                    <div style={{ marginTop: '3rem', display: 'flex', justifyContent: 'center', gap: '3rem' }}>
+                    <div className="active-room-controls" style={{ marginTop: '2rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '1.5rem' }}>
                         <button
                             onClick={toggleReady}
                             disabled={!me?.champion_id}

@@ -158,7 +158,21 @@ const Lobby = ({ setInGame, setRoomId, playerName, setPlayerName, user }) => {
                         LOGOUT
                     </button>
                 </div>
-                <p className="lobby-subtitle">UMA LENDA DO PORTO DO REINO</p>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                    <p className="lobby-subtitle">UMA LENDA DO PORTO DO REINO</p>
+                    <button
+                        onClick={() => setShowStats(!showStats)}
+                        className="btn-primary"
+                        style={{
+                            background: showStats ? '#ef4444' : '#ffd700',
+                            fontSize: '1.2rem',
+                            padding: '5px 15px',
+                            color: '#000'
+                        }}
+                    >
+                        {showStats ? 'FECHAR ESTATÍSTICAS' : 'VER ESTATÍSTICAS'}
+                    </button>
+                </div>
             </header>
 
             <div className="main-content-layout" style={{ maxWidth: '95rem' }}>
@@ -218,25 +232,6 @@ const Lobby = ({ setInGame, setRoomId, playerName, setPlayerName, user }) => {
                 </div>
             </div>
 
-            {/* Stats Toggle Button */}
-            <button
-                onClick={() => setShowStats(!showStats)}
-                style={{
-                    position: 'fixed',
-                    top: '20px',
-                    right: '20px',
-                    background: showStats ? '#ef4444' : '#ffd700',
-                    border: '3px solid #000',
-                    padding: '10px 20px',
-                    fontFamily: 'VT323',
-                    fontSize: '1.5rem',
-                    cursor: 'pointer',
-                    boxShadow: '4px 4px #000',
-                    zIndex: 999
-                }}
-            >
-                {showStats ? 'FECHAR STATS' : 'VER STATS'}
-            </button>
 
             {/* Stats Panel Overlay */}
             {showStats && (

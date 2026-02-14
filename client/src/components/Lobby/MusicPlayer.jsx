@@ -7,20 +7,15 @@ const MusicPlayer = () => {
     const playerRef = useRef(null);
 
     useEffect(() => {
-        // Load YouTube IFrame API
-        const tag = document.createElement('script');
-        tag.src = 'https://www.youtube.com/iframe_api';
-        const firstScript = document.getElementsByTagName('script')[0];
-        firstScript.parentNode.insertBefore(tag, firstScript);
-
-        window.onYouTubeIframeAPIReady = () => {
+        const initPlayer = () => {
             playerRef.current = new window.YT.Player('youtube-player', {
-                videoId: 'jfKfPfyJRdk', // Lofi Girl - beats to relax/study to
+                videoId: 'jfKfPfyJRdk',
                 playerVars: {
                     autoplay: 0,
                     controls: 0,
                     modestbranding: 1,
-                    rel: 0
+                    rel: 0,
+                    origin: window.location.origin
                 },
                 events: {
                     onReady: (event) => {
@@ -29,6 +24,16 @@ const MusicPlayer = () => {
                 }
             });
         };
+
+        if (window.YT && window.YT.Player) {
+            initPlayer();
+        } else {
+            const tag = document.createElement('script');
+            tag.src = 'https://www.youtube.com/iframe_api';
+            const firstScript = document.getElementsByTagName('script')[0];
+            firstScript.parentNode.insertBefore(tag, firstScript);
+            window.onYouTubeIframeAPIReady = initPlayer;
+        }
 
         // Load from localStorage
         const savedVolume = localStorage.getItem('musicVolume');
