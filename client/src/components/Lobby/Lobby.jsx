@@ -178,7 +178,7 @@ const Lobby = ({ playerName, setPlayerName, user }) => {
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
                     <p className="lobby-subtitle">UMA LENDA DO PORTO DO REINO</p>
                     <div style={{ display: 'flex', gap: '10px' }}>
-                        {user?.email?.toLowerCase() === 'admin@lwb.com' && (
+                        {(user?.email?.trim().toLowerCase() === 'admin@lwb.com' || user?.email === 'admin@lwb.com') && (
                             <button
                                 onClick={() => navigate('/admin')}
                                 className="btn-primary"
@@ -230,6 +230,12 @@ const Lobby = ({ playerName, setPlayerName, user }) => {
                                 />
                                 <div style={{ fontSize: '0.8rem', color: '#ffd700', marginTop: '4px', opacity: 0.8, textAlign: 'center' }}>
                                     Vinculado a: {user?.email}
+                                    {/* DEBUG INFO - REMOVE LATER */}
+                                    <div style={{ color: 'red', fontSize: '10px', marginTop: '2px' }}>
+                                        Check: "{user?.email?.trim().toLowerCase()}" vs "admin@lwb.com"
+                                        <br />
+                                        IsMatch: {user?.email?.trim().toLowerCase() === 'admin@lwb.com' ? 'TRUE' : 'FALSE'}
+                                    </div>
                                 </div>
                                 <button
                                     onClick={createRoom}
