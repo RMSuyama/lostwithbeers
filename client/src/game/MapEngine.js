@@ -180,187 +180,166 @@ CHAMPION_SKINS.shiryusuyama = CHAMPION_SKINS.shiryu;
 CHAMPION_SKINS.rafarofa = CHAMPION_SKINS.charles;
 
 export const generateMap = (seed = 0) => {
-    // Simple LCG seeded random
-    let s = seed;
+    // Better Random
+    let s = seed + 12345;
     const rnd = () => {
         s = (s * 9301 + 49297) % 233280;
         return s / 233280;
     };
 
-    // Start with WATER (everything is blocked unless carved)
+    // Initialize Arrays
     const grid = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(TILE_TYPES.MURKY_WATER));
-    // Scales: 0=Walkable, 1=Dashable Barrier, 2=High Wall (Skills only), 3=Absolute Blocker
     const scales = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(3));
-    // Collisions: Simple boolean (true = blocked for walking) - Kept for legacy compatibility
     const collisions = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(true));
 
-    const drawPath = (x1, y1, x2, y2, width = 8, type = TILE_TYPES.GRASS) => {
-        // Simple linear interpolation to draw a thick path
-        const dist = Math.hypot(x2 - x1, y2 - y1);
-        const steps = dist * 2;
-        for (let i = 0; i <= steps; i++) {
-            const px = Math.floor(x1 + (x2 - x1) * (i / steps));
-            const py = Math.floor(y1 + (y2 - y1) * (i / steps));
-            for (let wy = -width; wy <= width; wy++) {
-                for (let wx = -width; wx <= width; wx++) {
-                    const ty = py + wy;
-                    const tx = px + wx;
-                    if (tx >= 0 && tx < MAP_WIDTH && ty >= 0 && ty < MAP_HEIGHT) {
-                        grid[ty][tx] = type;
-                        scales[ty][tx] = 0; // Natural paths are level 0
-                        collisions[ty][tx] = false; // Walkable
+    // --- HELPER: Draw Circle ---
+    const drawCircle = (cx, cy, r, type) => {
+        for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
+            for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
+                if (x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT) {
+                    if (Math.hypot(x - cx, y - cy) <= r) {
+                        grid[y][x] = type;
+                        scales[y][x] = 0;
+                        collisions[y][x] = false;
                     }
                 }
             }
         }
     };
 
-    // === FAITHFUL REPRODUCTION OF SKETCH ===
-    // Top-down MOBA map with organic curved paths
-    // Two spawn corridors → Y-junction → Curved loops → Base entrance
+    // --- HELPER: Catmull-Rom Spline Interpolation for Organic Curves ---
+    // Points: Array of {x, y}
+    const drawSplinePath = (points, widthFn) => {
+        if (points.length < 2) return;
 
-    // Helper: Bezier curve path generator
-    const drawCurve = (points, width, type) => {
-        const steps = 100;
-        for (let t = 0; t <= steps; t++) {
-            const u = t / steps;
-            // Cubic Bezier interpolation
-            const x = Math.pow(1 - u, 3) * points[0].x +
-                3 * Math.pow(1 - u, 2) * u * points[1].x +
-                3 * (1 - u) * Math.pow(u, 2) * points[2].x +
-                Math.pow(u, 3) * points[3].x;
-            const y = Math.pow(1 - u, 3) * points[0].y +
-                3 * Math.pow(1 - u, 2) * u * points[1].y +
-                3 * (1 - u) * Math.pow(u, 2) * points[2].y +
-                Math.pow(u, 3) * points[3].y;
-            drawPath(Math.floor(x), Math.floor(y), Math.floor(x), Math.floor(y), width, type);
+        // Add ghost points at ends for Catmull-Rom
+        const p = [points[0], ...points, points[points.length - 1]];
+
+        for (let i = 0; i < p.length - 3; i++) {
+            const p0 = p[i];
+            const p1 = p[i + 1];
+            const p2 = p[i + 2];
+            const p3 = p[i + 3];
+
+            // Steps based on distance to ensure no gaps
+            const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+            const steps = Math.floor(dist * 2);
+
+            for (let t = 0; t <= steps; t++) {
+                const u = t / steps;
+
+                // Catmull-Rom formula
+                const q0 = -u * u * u + 2 * u * u - u;
+                const q1 = 3 * u * u * u - 5 * u * u + 2;
+                const q2 = -3 * u * u * u + 4 * u * u + u;
+                const q3 = u * u * u - u * u;
+
+                const tx = 0.5 * (p0.x * q0 + p1.x * q1 + p2.x * q2 + p3.x * q3);
+                const ty = 0.5 * (p0.y * q0 + p1.y * q1 + p2.y * q2 + p3.y * q3);
+
+                // Variable width
+                const currentWidth = typeof widthFn === 'function'
+                    ? widthFn((i * steps + t) / (points.length * steps))
+                    : widthFn;
+
+                drawCircle(tx, ty, currentWidth, TILE_TYPES.GRASS);
+            }
         }
     };
 
-    // LEFT SPAWN (Top-Left Corner) → Curved inward
-    drawPath(15, 5, 15, 15, 5, TILE_TYPES.GRASS); // Vertical start
-    drawCurve([
-        { x: 15, y: 15 },
-        { x: 15, y: 25 },
-        { x: 20, y: 35 },
-        { x: 30, y: 42 }
-    ], 5, TILE_TYPES.GRASS);
+    // === COMPLEX MAP DESIGN ===
+    // Concept: "The Twin Serpents"
+    // Two paths start at top corners, wind aggressively, merge in center, split again, and re-merge at base.
 
-    // RIGHT SPAWN (Top-Right Corner) → Curved inward  
-    drawPath(85, 5, 85, 15, 5, TILE_TYPES.GRASS); // Vertical start
-    drawCurve([
-        { x: 85, y: 15 },
-        { x: 85, y: 25 },
-        { x: 80, y: 35 },
-        { x: 70, y: 42 }
-    ], 5, TILE_TYPES.GRASS);
+    // PATH 1: Left Serpent (Windy)
+    const leftPath = [
+        { x: 15, y: 5 },   // Spawn
+        { x: 15, y: 20 },
+        { x: 35, y: 30 },  // Curve Right
+        { x: 10, y: 45 },  // Hard Left (Ambush spot)
+        { x: 25, y: 60 },  // Back to Center
+        { x: 50, y: 70 }   // Merge Point
+    ];
 
-    // Y-JUNCTION: Both paths meet at center
-    drawPath(30, 42, 50, 48, 5, TILE_TYPES.GRASS); // Left approach
-    drawPath(70, 42, 50, 48, 5, TILE_TYPES.GRASS); // Right approach
+    // PATH 2: Right Serpent (Looping)
+    const rightPath = [
+        { x: 85, y: 5 },   // Spawn
+        { x: 85, y: 20 },
+        { x: 65, y: 30 },  // Curve Left
+        { x: 90, y: 45 },  // Hard Right
+        { x: 75, y: 60 },  // Back to Center
+        { x: 50, y: 70 }   // Merge Point
+    ];
 
-    // CENTER MERGE → Down toward loops
-    drawPath(50, 48, 50, 58, 6, TILE_TYPES.GRASS);
+    // PATH 3: The Final Descent (Central Zig-Zag)
+    const finalPath = [
+        { x: 50, y: 70 },
+        { x: 35, y: 80 },  // Left zig
+        { x: 65, y: 85 },  // Right zag
+        { x: 50, y: 92 }   // Base Gate
+    ];
 
-    // LEFT LOOP (Yellow in sketch)
-    drawCurve([
-        { x: 50, y: 58 },
-        { x: 35, y: 62 },
-        { x: 25, y: 70 },
-        { x: 25, y: 78 }
-    ], 5, TILE_TYPES.GRASS);
-    drawCurve([
-        { x: 25, y: 78 },
-        { x: 25, y: 82 },
-        { x: 30, y: 85 },
-        { x: 40, y: 85 }
-    ], 5, TILE_TYPES.GRASS);
+    // Draw Paths with variable width (Wider at turns for fighting space)
+    drawSplinePath(leftPath, (p) => 4 + Math.sin(p * 10) * 1.5);
+    drawSplinePath(rightPath, (p) => 4 + Math.cos(p * 10) * 1.5);
+    drawSplinePath(finalPath, 6); // Wide final approach!
 
-    // RIGHT LOOP (Red in sketch)
-    drawCurve([
-        { x: 50, y: 58 },
-        { x: 65, y: 62 },
-        { x: 75, y: 70 },
-        { x: 75, y: 78 }
-    ], 5, TILE_TYPES.GRASS);
-    drawCurve([
-        { x: 75, y: 78 },
-        { x: 75, y: 82 },
-        { x: 70, y: 85 },
-        { x: 60, y: 85 }
-    ], 5, TILE_TYPES.GRASS);
+    // BASE AREA (The Tavern Fort)
+    for (let y = 88; y < 98; y++) {
+        for (let x = 40; x <= 60; x++) {
+            // Circular Base Fort
+            if (Math.hypot(x - 50, y - 98) < 14) {
+                grid[y][x] = TILE_TYPES.FORT_WOOD;
+                scales[y][x] = 0; // Walkable area inside base
+                collisions[y][x] = false;
+            }
+        }
+    }
 
-    // FINAL MERGE → Base entrance
-    drawPath(40, 85, 50, 87, 5, TILE_TYPES.GRASS);
-    drawPath(60, 85, 50, 87, 5, TILE_TYPES.GRASS);
-    drawPath(50, 87, 50, 92, 8, TILE_TYPES.GRASS);
-
-    // BASE PLATFORM (Tavern)
-    drawPath(50, 92, 50, 98, 16, TILE_TYPES.FORT_WOOD);
-
-    // Side decorative areas
-    drawPath(12, 60, 12, 60, 6, TILE_TYPES.COBBLESTONE); // Left port
-    drawPath(88, 60, 88, 60, 6, TILE_TYPES.COBBLESTONE); // Right port
-
-    // DRAW STONE WALLS AROUND LAND
-    // We scan the grid and place walls on any water tile adjacent to land
+    // --- DECORATION & WALLS ---
+    // 1. Stone Walls around all land edges
     for (let y = 1; y < MAP_HEIGHT - 1; y++) {
         for (let x = 1; x < MAP_WIDTH - 1; x++) {
             if (grid[y][x] === TILE_TYPES.MURKY_WATER) {
-                const adjLand = [
-                    grid[y - 1][x], grid[y + 1][x], grid[y][x - 1], grid[y][x + 1],
-                    grid[y - 1][x - 1], grid[y - 1][x + 1], grid[y + 1][x - 1], grid[y + 1][x + 1]
-                ].some(t => t !== TILE_TYPES.MURKY_WATER && t !== TILE_TYPES.STONE_WALL);
-
-                if (adjLand) {
-                    // Create Stone Wall boundary
+                // Check 8 neighbors for Land
+                let hasLand = false;
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (grid[y + dy][x + dx] !== TILE_TYPES.MURKY_WATER && grid[y + dy][x + dx] !== TILE_TYPES.STONE_WALL) {
+                            hasLand = true; break;
+                        }
+                    }
+                    if (hasLand) break;
+                }
+                if (hasLand) {
                     grid[y][x] = TILE_TYPES.STONE_WALL;
-                    scales[y][x] = 2; // Default stone wall is scale 2 (Skill only)
+                    scales[y][x] = 2; // Projectiles fly over, players blocked
                     collisions[y][x] = true;
                 }
             }
         }
     }
 
-    // Assign Scale 1 to curved low barriers near base
-    // This allows dashing over the "bend"
-    const centerX = 50, centerY = 82, r = 13;
-    for (let y = 60; y < 95; y++) {
-        for (let x = 20; x < 80; x++) {
-            if (grid[y][x] === TILE_TYPES.STONE_WALL) {
-                const dist = Math.hypot(x - centerX, y - centerY);
-                if (Math.abs(dist - r) < 3) {
-                    scales[y][x] = 1; // Mark as dashable barrier
-                    collisions[y][x] = true; // Still blocks walking
-                }
-            }
-        }
-    }
-
-    // GATES: Open for monsters (Scale 0)
-    const openGate = (gx, gy) => {
-        for (let dy = -3; dy <= 3; dy++) {
-            for (let dx = -3; dx <= 3; dx++) {
-                const ty = gy + dy, tx = gx + dx;
-                if (grid[ty]?.[tx] === TILE_TYPES.STONE_WALL) {
-                    grid[ty][tx] = TILE_TYPES.MURKY_WATER;
-                    scales[ty][tx] = 0; // Monsters/Players can cross
-                    collisions[ty][tx] = false;
-                }
-            }
-        }
-    };
-    openGate(20, 10);
-    openGate(80, 10);
-
-    // Decorative Crates/Obstacles on paths
-    for (let i = 0; i < 150; i++) {
+    // 2. Random Obstacles (Crates) on Paths - BUT CHECK PATHABILITY?
+    // For now, simple random placement, but kept sparse to avoid blocking
+    for (let i = 0; i < 80; i++) {
         const rx = Math.floor(rnd() * MAP_WIDTH);
         const ry = Math.floor(rnd() * MAP_HEIGHT);
         if (grid[ry][rx] === TILE_TYPES.GRASS) {
-            grid[ry][rx] = TILE_TYPES.CARGO_CRATE;
-            scales[ry][rx] = 2; // Treat crate as high wall (Scale 2)
-            collisions[ry][rx] = true;
+            // Ensure not blocking spawn or base or narrow chokes
+            // Heuristic: Check neighbors to ensure flow
+            // Simple check: don't place if adjacent to wall
+            let nearWall = false;
+            for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    if (grid[ry + dy]?.[rx + dx] === TILE_TYPES.STONE_WALL) nearWall = true;
+                }
+            }
+            if (!nearWall) {
+                grid[ry][rx] = TILE_TYPES.CARGO_CRATE;
+                scales[ry][rx] = 2;
+                collisions[ry][rx] = true;
+            }
         }
     }
 
