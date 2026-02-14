@@ -43,6 +43,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const [isMobile, setIsMobile] = useState(false);
     const isHost = useRef(false);
     const activeVirtualKeys = useRef(new Set());
+    const keys = useRef({});
 
     // Refs for Loop performance & Fresh state
     const myPos = useRef({ x: 400, y: 400 });
@@ -419,27 +420,28 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
 
     // Input Controller
     useEffect(() => {
-        const keys = {};
         const handleKeyDown = (e) => {
             const key = e.key.toLowerCase();
             if (key === 'escape') { setShowEscMenu(prev => !prev); return; }
-            keys[key] = true;
+            keys.current[key] = true;
             if (gameState !== 'playing' || showEscMenu) return;
+            // Attack and skills (only on press)
             if (key === 'a') basicAttack();
             if (key === 'q') useSkill();
             if (key === ' ') dash();
         };
-        const handleKeyUp = (e) => keys[e.key.toLowerCase()] = false;
+        const handleKeyUp = (e) => keys.current[e.key.toLowerCase()] = false;
 
         const moveLoop = setInterval(() => {
             if (gameState !== 'playing' || showEscMenu) return;
             const speed = 5; let mx = 0, my = 0;
             const vKeys = activeVirtualKeys.current;
+            const k = keys.current;
 
-            if (keys['arrowup'] || vKeys.has('ArrowUp')) my -= speed;
-            if (keys['arrowdown'] || vKeys.has('ArrowDown')) my += speed;
-            if (keys['arrowleft'] || vKeys.has('ArrowLeft')) mx -= speed;
-            if (keys['arrowright'] || vKeys.has('ArrowRight')) mx += speed;
+            if (k['arrowup'] || k['w'] || vKeys.has('ArrowUp')) my -= speed;
+            if (k['arrowdown'] || k['s'] || vKeys.has('ArrowDown')) my += speed;
+            if (k['arrowleft'] || k['a'] || vKeys.has('ArrowLeft')) mx -= speed;
+            if (k['arrowright'] || k['d'] || vKeys.has('ArrowRight')) mx += speed;
 
             if (mx !== 0 || my !== 0) {
                 const nextX = Math.max(0, Math.min(MAP_WIDTH * TILE_SIZE, myPos.current.x + mx));
