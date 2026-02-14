@@ -81,6 +81,10 @@ const Lobby = ({ playerName, setPlayerName, user }) => {
 
     const createRoom = async () => {
         if (!playerName.trim()) return alert('Herói, identifique-se antes de iniciar sua jornada!');
+
+        const roomName = prompt('Nome da Sala (ex: "Reino dos Bravos"):');
+        if (!roomName?.trim()) return alert('Dê um nome à sua sala!');
+
         setCreating(true);
         localStorage.setItem('playerName', playerName);
 
@@ -88,7 +92,7 @@ const Lobby = ({ playerName, setPlayerName, user }) => {
             const { data, error } = await supabase
                 .from('rooms')
                 .insert([{
-                    name: `Reino de ${playerName}`,
+                    name: roomName.trim(),
                     status: 'waiting'
                 }])
                 .select();
