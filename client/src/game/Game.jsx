@@ -29,8 +29,10 @@ CHAMPIONS.shiryusuyama = CHAMPIONS.shiryu;
 CHAMPIONS.rafarofa = CHAMPIONS.charles; // Charles replaced Rafarofa in some versions
 const getChamp = (id) => CHAMPIONS[id] || CHAMPIONS.jaca;
 
-const BASE_POS = { x: 320, y: 320 };
-const SPAWN_POS = { x: 3000, y: 3000 };
+const BASE_POS = { x: 50 * TILE_SIZE, y: 90 * TILE_SIZE };
+const SPAWN_POS_L = { x: 15 * TILE_SIZE, y: 10 * TILE_SIZE };
+const SPAWN_POS_R = { x: 85 * TILE_SIZE, y: 10 * TILE_SIZE };
+const HUB_POS = { x: 50 * TILE_SIZE, y: 60 * TILE_SIZE };
 
 const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const canvasRef = useRef(null);
@@ -56,16 +58,16 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const keys = useRef({});
 
     // Refs for Loop performance & Fresh state
-    const myPos = useRef({ x: 400, y: 400 });
+    const myPos = useRef({ x: BASE_POS.x, y: BASE_POS.y - 100 });
     const facingAngle = useRef(0);
-    const cameraRef = useRef({ x: 400, y: 400 });
+    const cameraRef = useRef({ x: BASE_POS.x, y: BASE_POS.y });
     const monstersRef = useRef([]);
     const projectilesRef = useRef([]);
     const damageRef = useRef([]);
     const baseHpRef = useRef(1000);
     const waveStats = useRef({ current: 0, timer: 60, totalMobs: 0, deadMobs: 0 });
     const walkTimerRef = useRef(0);
-    const lastPosRef = useRef({ x: 400, y: 400 });
+    const lastPosRef = useRef({ x: BASE_POS.x, y: BASE_POS.y });
     const statsRef = useRef({
         hp: getChamp(championId).hp || 100,
         maxHp: getChamp(championId).hp || 100,
@@ -379,7 +381,10 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     attackEffect.current,
                     baseHpRef.current,
                     1000,
-                    [{ x: SPAWN_POS.x, y: SPAWN_POS.y, timer: waveUi.timer }]
+                    [
+                        { x: SPAWN_POS_L.x, y: SPAWN_POS_L.y, timer: waveUi.timer },
+                        { x: SPAWN_POS_R.x, y: SPAWN_POS_R.y, timer: waveUi.timer }
+                    ]
                 );
             }
             animationFrame = requestAnimationFrame(loop);
@@ -404,11 +409,12 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
 
         for (let i = 0; i < count; i++) {
             const offset = i * 200;
+            const spawnSide = i % 2 === 0 ? SPAWN_POS_L : SPAWN_POS_R;
             setTimeout(() => {
                 monstersRef.current.push({
                     id: `w-${waveStats.current.current}-${i}`,
-                    x: SPAWN_POS.x + (Math.random() - 0.5) * 150,
-                    y: SPAWN_POS.y + (Math.random() - 0.5) * 150,
+                    x: spawnSide.x + (Math.random() - 0.5) * 150,
+                    y: spawnSide.y + (Math.random() - 0.5) * 150,
                     type: Math.random() > 0.4 ? 'orc' : 'slime',
                     hp: 50 + (waveStats.current.current * 25),
                     maxHp: 50 + (waveStats.current.current * 25),

@@ -180,55 +180,56 @@ CHAMPION_SKINS.shiryusuyama = CHAMPION_SKINS.shiryu;
 CHAMPION_SKINS.rafarofa = CHAMPION_SKINS.charles;
 
 export const generateMap = () => {
-    const grid = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(TILE_TYPES.GRASS));
-    const collisions = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(false));
+    // Start with WATER (everything is blocked unless carved)
+    const grid = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(TILE_TYPES.MURKY_WATER));
+    const collisions = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(true));
 
-    const drawPath = (x1, y1, x2, y2, width = 6) => {
-        for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) {
-            for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) {
-                for (let wy = -width; wy <= width; wy++) {
-                    for (let wx = -width; wx <= width; wx++) {
-                        const ty = y + wy;
-                        const tx = x + wx;
-                        if (tx >= 0 && tx < MAP_WIDTH && ty >= 0 && ty < MAP_HEIGHT) {
-                            grid[ty][tx] = TILE_TYPES.COBBLESTONE;
-                        }
+    const drawPath = (x1, y1, x2, y2, width = 8, type = TILE_TYPES.GRASS) => {
+        // Simple linear interpolation to draw a thick path
+        const dist = Math.hypot(x2 - x1, y2 - y1);
+        const steps = dist * 2;
+        for (let i = 0; i <= steps; i++) {
+            const px = Math.floor(x1 + (x2 - x1) * (i / steps));
+            const py = Math.floor(y1 + (y2 - y1) * (i / steps));
+            for (let wy = -width; wy <= width; wy++) {
+                for (let wx = -width; wx <= width; wx++) {
+                    const ty = py + wy;
+                    const tx = px + wx;
+                    if (tx >= 0 && tx < MAP_WIDTH && ty >= 0 && ty < MAP_HEIGHT) {
+                        grid[ty][tx] = type;
+                        collisions[ty][tx] = false;
                     }
                 }
             }
         }
     };
 
-    for (let i = 0; i < MAP_WIDTH; i++) {
-        const y = i;
-        const x = MAP_WIDTH - 1 - i;
-        for (let w = -4; w <= 4; w++) {
-            const ty = y + w;
-            if (ty >= 0 && ty < MAP_HEIGHT) {
-                grid[ty][x] = TILE_TYPES.MURKY_WATER;
-                collisions[ty][x] = true;
-            }
-        }
-    }
+    // Draw the "U/Y" shape matching the user's drawing
+    // Central Hub
+    const hubX = 50, hubY = 60;
+    drawPath(hubX, hubY, hubX, hubY, 12, TILE_TYPES.COBBLESTONE); // Wide center
 
-    drawPath(10, 10, 90, 10);
-    drawPath(90, 10, 90, 90);
-    drawPath(10, 10, 10, 90);
-    drawPath(10, 90, 90, 90);
-    drawPath(10, 10, 90, 90);
+    // Bottom Path to Base (Ambev Truck)
+    drawPath(hubX, hubY, hubX, 90, 10, TILE_TYPES.GRASS);
+    drawPath(hubX, 85, hubX, 95, 12, TILE_TYPES.FORT_WOOD); // Base Platform
 
-    for (let y = 5; y < 15; y++) {
-        for (let x = 5; x < 15; x++) {
-            grid[y][x] = TILE_TYPES.FORT_WOOD;
-        }
-    }
-    for (let y = 85; y < 95; y++) {
-        for (let x = 85; x < 95; x++) {
-            grid[y][x] = TILE_TYPES.STONE;
-        }
-    }
+    // Top-Left Path (Spawn 1)
+    drawPath(hubX, hubY, 30, 45, 8, TILE_TYPES.GRASS); // Bend
+    drawPath(30, 45, 15, 10, 8, TILE_TYPES.GRASS); // Top-left terminal
 
-    for (let i = 0; i < 200; i++) {
+    // Top-Right Path (Spawn 2)
+    drawPath(hubX, hubY, 70, 45, 8, TILE_TYPES.GRASS); // Bend
+    drawPath(70, 45, 85, 10, 8, TILE_TYPES.GRASS); // Top-right terminal
+
+    // Lateral Loops (The circles in the drawing)
+    drawPath(30, 65, 30, 65, 10, TILE_TYPES.COBBLESTONE);
+    drawPath(70, 65, 70, 65, 10, TILE_TYPES.COBBLESTONE);
+    // Connect loops to hub
+    drawPath(30, 65, hubX, hubY, 6, TILE_TYPES.GRASS);
+    drawPath(70, 65, hubX, hubY, 6, TILE_TYPES.GRASS);
+
+    // Decorative Crates/Obstacles on paths
+    for (let i = 0; i < 150; i++) {
         const rx = Math.floor(Math.random() * MAP_WIDTH);
         const ry = Math.floor(Math.random() * MAP_HEIGHT);
         if (grid[ry][rx] === TILE_TYPES.GRASS) {
