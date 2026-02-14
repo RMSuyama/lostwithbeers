@@ -434,22 +434,22 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
 
         const moveLoop = setInterval(() => {
             if (gameState !== 'playing' || showEscMenu) return;
-            const speed = 5; let mx = 0, my = 0;
+            const speed = 5;
+            let mx = 0, my = 0;
             const vKeys = activeVirtualKeys.current;
             const k = keys.current;
             const mode = settings.controlMode || 'both';
 
-            if ((mode === 'both' || mode === 'arrows') && (k['arrowup'] || vKeys.has('ArrowUp'))) my -= speed;
-            else if ((mode === 'both' || mode === 'wasd') && k['w']) my -= speed;
+            // Movement Logic - Combined for responsiveness
+            const up = ((mode === 'both' || mode === 'arrows') && (k['arrowup'] || vKeys.has('ArrowUp'))) || ((mode === 'both' || mode === 'wasd') && k['w']);
+            const down = ((mode === 'both' || mode === 'arrows') && (k['arrowdown'] || vKeys.has('ArrowDown'))) || ((mode === 'both' || mode === 'wasd') && k['s']);
+            const left = ((mode === 'both' || mode === 'arrows') && (k['arrowleft'] || vKeys.has('ArrowLeft'))) || ((mode === 'both' || mode === 'wasd') && k['a']);
+            const right = ((mode === 'both' || mode === 'arrows') && (k['arrowright'] || vKeys.has('ArrowRight'))) || ((mode === 'both' || mode === 'wasd') && k['d']);
 
-            if ((mode === 'both' || mode === 'arrows') && (k['arrowdown'] || vKeys.has('ArrowDown'))) my += speed;
-            else if ((mode === 'both' || mode === 'wasd') && k['s']) my += speed;
-
-            if ((mode === 'both' || mode === 'arrows') && (k['arrowleft'] || vKeys.has('ArrowLeft'))) mx -= speed;
-            else if ((mode === 'both' || mode === 'wasd') && k['a']) mx -= speed;
-
-            if ((mode === 'both' || mode === 'arrows') && (k['arrowright'] || vKeys.has('ArrowRight'))) mx += speed;
-            else if ((mode === 'both' || mode === 'wasd') && k['d']) mx += speed;
+            if (up) my -= speed;
+            if (down) my += speed;
+            if (left) mx -= speed;
+            if (right) mx += speed;
 
             if (mx !== 0 || my !== 0) {
                 const nextX = Math.max(0, Math.min(MAP_WIDTH * TILE_SIZE, myPos.current.x + mx));
@@ -464,10 +464,6 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     }
                 }
 
-                // HARD COLLISION: Monsters
-                const isBlockedByMonster = monstersRef.current.some(m => Math.hypot(m.x - nextX, m.y - nextY) < 30);
-                if (isBlockedByMonster) return;
-
                 myPos.current.x = nextX;
                 myPos.current.y = nextY;
                 facingAngle.current = Math.atan2(my, mx);
@@ -481,7 +477,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
         };
-    }, [championId, gameState, showEscMenu]);
+    }, [championId, gameState, showEscMenu, settings]);
 
 
     const basicAttack = () => {
