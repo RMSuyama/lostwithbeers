@@ -102,8 +102,6 @@ const Lobby = ({ playerName, setPlayerName, user }) => {
         if (await checkAlreadyInRoom()) return;
 
         const roomName = prompt('Nome da Sala (ex: "Reino dos Bravos"):');
-
-        const roomName = prompt('Nome da Sala (ex: "Reino dos Bravos"):');
         if (!roomName?.trim()) return alert('Dê um nome à sua sala!');
 
         setCreating(true);

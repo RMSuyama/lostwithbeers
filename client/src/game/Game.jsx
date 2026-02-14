@@ -1049,7 +1049,6 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     </button>
                 </div>
             )}
-            )}
 
             {/* Voice Chat Overlay */}
             <VoiceChat

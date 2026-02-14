@@ -6,7 +6,21 @@ import { Shield, Users, AlertTriangle, Activity } from 'lucide-react';
 const AdminPanel = ({ session }) => {
     const navigate = useNavigate();
     const [onlineUsers, setOnlineUsers] = useState([]);
-    const [stats, setStats] = useState({ rooms: 0, playing: 0 });
+    const [stats, setStats] = useState({ rooms: [], playing: 0 }); // Changed rooms to array
+
+    const deleteRoom = async (roomId) => {
+        if (!window.confirm('Tem certeza que deseja fechar esta sala? Todos os jogadores serão desconectados.')) return;
+
+        try {
+            await supabase.from('players').delete().eq('room_id', roomId);
+            await supabase.from('rooms').delete().eq('id', roomId);
+            // Stats will auto-update via interval or we can force fetch
+            alert('Sala fechada com sucesso.');
+        } catch (error) {
+            console.error('Erro ao fechar sala:', error);
+            alert('Erro ao fechar sala.');
+        }
+    };
 
     useEffect(() => {
         // Strict Admin Check
@@ -16,12 +30,11 @@ const AdminPanel = ({ session }) => {
             return;
         }
 
-        // Fetch Room Stats
         const fetchStats = async () => {
-            const { data: rooms } = await supabase.from('rooms').select('status');
+            const { data: rooms } = await supabase.from('rooms').select('*'); // Select all fields
             if (rooms) {
                 setStats({
-                    rooms: rooms.length,
+                    rooms: rooms, // Store full array
                     playing: rooms.filter(r => r.status === 'playing').length
                 });
             }
@@ -82,7 +95,7 @@ const AdminPanel = ({ session }) => {
                 <div className="stat-card" style={cardStyle}>
                     <Users size={32} color="#3b82f6" />
                     <div>
-                        <div style={{ fontSize: '2rem' }}>{stats.rooms}</div>
+                        <div style={{ fontSize: '2rem' }}>{stats.rooms.length || 0}</div>
                         <div style={{ opacity: 0.7 }}>SALAS ATIVAS</div>
                     </div>
                 </div>
