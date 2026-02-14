@@ -8,15 +8,16 @@ import MobileControls from '../components/MobileControls';
 const CHAMPIONS = {
     jaca: { name: 'Jaca', color: '#15803d', hp: 100, mana: 40, basic: { range: 80, arc: 1.6, dmg: 28 }, skill: { name: 'Death Roll', cost: 15, cd: 4000 } },
     djox: { name: 'Djox', color: '#334155', hp: 140, mana: 50, basic: { range: 110, arc: 2.2, dmg: 20, kb: 30 }, skill: { name: 'Anchor Smash', cost: 20, cd: 6000 } },
-    brunao: { name: 'Brunao', color: '#db2777', hp: 180, mana: 60, basic: { range: 70, arc: 1.4, dmg: 16, kb: 50 }, skill: { name: 'Guardian Aura', cost: 25, cd: 9000 } },
+    brunao: { name: 'Brunão', color: '#db2777', hp: 180, mana: 60, basic: { range: 70, arc: 1.4, dmg: 16, kb: 50 }, skill: { name: 'Guardian Aura', cost: 25, cd: 9000 } },
     jubarbie: { name: 'Jubarbie', color: '#1e3a8a', hp: 220, mana: 50, basic: { range: 130, arc: 2.6, dmg: 24 }, skill: { name: 'Heavy Splash', cost: 30, cd: 8000 } },
-    rafarofa: { name: 'Rafarofa', color: '#f59e0b', hp: 90, mana: 130, basic: { range: 220, arc: 0.6, dmg: 12, ranged: true }, skill: { name: 'Melodic Buff', cost: 35, cd: 6000 } },
-    charles: { name: 'Charles', color: '#475569', hp: 80, mana: 70, basic: { range: 350, arc: 0.3, dmg: 20, ranged: true }, skill: { name: 'Deadeye', cost: 25, cd: 7000 } },
-    kleyiton: { name: 'Kleyiton', color: '#b45309', hp: 110, mana: 90, basic: { range: 160, arc: 1.2, dmg: 18 }, skill: { name: 'Turret Burst', cost: 30, cd: 10000 } },
-    gusto: { name: 'Gusto', color: '#78350f', hp: 150, mana: 60, basic: { range: 90, arc: 1.8, dmg: 22 }, skill: { name: 'Barrel Roll', cost: 20, cd: 6000 } },
-    milan: { name: 'Milan', color: '#4a044e', hp: 70, mana: 160, basic: { range: 190, arc: 2.0, dmg: 14 }, skill: { name: 'Ghost Chain', cost: 25, cd: 5000 } },
-    enzo: { name: 'Enzo', color: '#0369a1', hp: 90, mana: 50, basic: { range: 100, arc: 2.2, dmg: 17 }, skill: { name: 'Volt Dash', cost: 12, cd: 3000 } },
-    mayron: { name: 'Mayron', color: '#0d9488', hp: 110, mana: 100, basic: { range: 170, arc: 2.4, dmg: 18 }, skill: { name: 'Tide Wave', cost: 25, cd: 6000 } }
+    shiryu: { name: 'Shiryu Suyama', color: '#064e3b', hp: 90, mana: 130, basic: { range: 250, arc: 0.6, dmg: 12, ranged: true }, skill: { name: 'Sopro Ancestral', cost: 35, cd: 6000 } },
+    charles: { name: 'J. Charles', color: '#475569', hp: 80, mana: 70, basic: { range: 350, arc: 0.3, dmg: 20, ranged: true }, skill: { name: 'Bateria de Guerra', cost: 25, cd: 7000 } },
+    gusto: { name: 'Gusto', color: '#78350f', hp: 150, mana: 60, basic: { range: 90, arc: 1.8, dmg: 22 }, skill: { name: 'Frasco Ácido', cost: 20, cd: 6000 } },
+    kleyiton: { name: 'Kleyiton', color: '#b45309', hp: 110, mana: 90, basic: { range: 160, arc: 1.2, dmg: 18 }, skill: { name: 'Campo Geométrico', cost: 30, cd: 10000 } },
+    milan: { name: 'Milan', color: '#4a044e', hp: 70, mana: 160, basic: { range: 190, arc: 2.0, dmg: 14 }, skill: { name: 'Blefe Espectral', cost: 25, cd: 5000 } },
+    enzo: { name: 'Enzo', color: '#0369a1', hp: 90, mana: 50, basic: { range: 100, arc: 2.2, dmg: 17 }, skill: { name: 'Riff Elétrico', cost: 12, cd: 3000 } },
+    mayron: { name: 'Mayron', color: '#0d9488', hp: 110, mana: 100, basic: { range: 170, arc: 2.4, dmg: 18 }, skill: { name: 'Corrente de Vento', cost: 25, cd: 6000 } },
+    klebao: { name: 'Klebão', color: '#ffffff', hp: 200, mana: 100, basic: { range: 300, arc: 0.2, dmg: 35, ranged: true }, skill: { name: 'Julgamento Supremo', cost: 50, cd: 12000 } }
 };
 
 const BASE_POS = { x: 320, y: 320 };
@@ -47,9 +48,17 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         maxHp: CHAMPIONS[championId]?.hp || 100,
         mana: CHAMPIONS[championId]?.mana || 50,
         maxMana: CHAMPIONS[championId]?.mana || 50,
+        atk: 1, // Start DMG 1
+        range: CHAMPIONS[championId]?.basic?.range || 150,
         xp: 0, maxXp: 50, level: 1,
         totalDamage: 0, kills: 0
     });
+
+    const [settings, setSettings] = useState(() => {
+        const saved = localStorage.getItem('gameSettings');
+        return saved ? JSON.parse(saved) : { showMyName: true, showMusicBtn: true };
+    });
+    const [showSettings, setShowSettings] = useState(false);
 
     const [uiStats, setUiStats] = useState({ ...statsRef.current });
     const [waveUi, setWaveUi] = useState({ current: 0, timer: 60, total: 0, dead: 0, baseHp: 1000 });
@@ -160,13 +169,18 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 p.y += Math.sin(p.angle) * p.speed;
                 p.life -= dt;
 
-                monstersRef.current.forEach(m => {
+                monstersRef.current.forEach((m, mIndex) => {
                     const dist = Math.hypot(m.x - p.x, m.y - p.y);
                     if (dist < 30) {
                         m.hp -= p.dmg;
                         statsRef.current.totalDamage += p.dmg;
                         spawnDamage(m.x, m.y, p.dmg);
                         p.life = 0;
+                        if (m.hp <= 0) {
+                            monstersRef.current.splice(mIndex, 1);
+                            gainXp(2);
+                            statsRef.current.kills++;
+                        }
                     }
                 });
                 return p.life > 0;
@@ -177,7 +191,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 if (m.hp <= 0) {
                     waveStats.current.deadMobs++;
                     statsRef.current.kills++;
-                    gainXp(m.type === 'orc' ? 35 : 15);
+                    gainXp(2);
                     return false;
                 }
 
@@ -296,13 +310,13 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         };
     }, [roomId, playerName, championId, gameState]);
 
+
     const startNextWave = () => {
         waveStats.current.current++;
         waveStats.current.timer = 60;
         const count = 5 + (waveStats.current.current * 4);
         waveStats.current.totalMobs = count;
         waveStats.current.deadMobs = 0;
-        levelUp();
 
         for (let i = 0; i < count; i++) {
             const offset = i * 200;
@@ -451,33 +465,68 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     }
                 });
                 break;
-            case 'rafarofa':
-                statsRef.current.mana = Math.min(statsRef.current.maxMana, statsRef.current.mana + 50);
+            case 'shiryu':
+                // Mystic blast / AoE
+                monstersRef.current.forEach(m => {
+                    if (Math.hypot(m.x - myPos.current.x, m.y - myPos.current.y) < 250) {
+                        const sdmg = 70 * levelBonus;
+                        m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg, '#064e3b');
+                    }
+                });
                 break;
             case 'charles':
-                projectilesRef.current.push({ x: myPos.current.x, y: myPos.current.y, angle: facingAngle.current, speed: 22, life: 3, dmg: 250 * levelBonus, color: '#475569' });
-                break;
-            case 'kleyiton':
+                // Bateria de Guerra (Shockwave)
                 monstersRef.current.forEach(m => {
                     if (Math.hypot(m.x - myPos.current.x, m.y - myPos.current.y) < 350) {
-                        const sdmg = 60 * levelBonus;
-                        m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg);
+                        const sdmg = 45 * levelBonus;
+                        m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg, '#475569');
+                        const ang = Math.atan2(m.y - myPos.current.y, m.x - myPos.current.x);
+                        m.x += Math.cos(ang) * 100; m.y += Math.sin(ang) * 100;
                     }
                 });
                 break;
             case 'gusto':
-                projectilesRef.current.push({ x: myPos.current.x, y: myPos.current.y, angle: facingAngle.current, speed: 10, life: 2, dmg: 150 * levelBonus, big: true, color: '#78350f' });
+                // Alchemist Blast (Big projectile)
+                projectilesRef.current.push({ x: myPos.current.x, y: myPos.current.y, angle: facingAngle.current, speed: 12, life: 2, dmg: 160 * levelBonus, big: true, color: '#10b981' });
+                break;
+            case 'kleyiton':
+                // Geometric Barrier (AoE DMG + minor push)
+                monstersRef.current.forEach(m => {
+                    const d = Math.hypot(m.x - myPos.current.x, m.y - myPos.current.y);
+                    if (d < 300) {
+                        const sdmg = 55 * levelBonus;
+                        m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg, '#c084fc');
+                        const ang = Math.atan2(m.y - myPos.current.y, m.x - myPos.current.x);
+                        m.x += Math.cos(ang) * 50; m.y += Math.sin(ang) * 50;
+                    }
+                });
+                break;
+            case 'klebao':
+                // JULGAMENTO SUPREMO (Massive Area Stun/DMG)
+                monstersRef.current.forEach(m => {
+                    const d = Math.hypot(m.x - myPos.current.x, m.y - myPos.current.y);
+                    if (d < 400) {
+                        const sdmg = 200 * levelBonus;
+                        m.hp -= sdmg; statsRef.current.totalDamage += sdmg;
+                        spawnDamage(m.x, m.y, "TAPA SECO!", "#ffffff");
+                        spawnDamage(m.x, m.y - 20, sdmg, "#ef4444");
+                        m.speed = 0; // Stun
+                        setTimeout(() => m.speed = 2, 2000);
+                    }
+                });
                 break;
             case 'milan':
+                // Card blast
                 monstersRef.current.forEach(m => {
                     if (Math.hypot(m.x - myPos.current.x, m.y - myPos.current.y) < 240) {
                         const sdmg = 85 * levelBonus;
-                        m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg);
+                        m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg, '#c026d3');
                     }
                 });
                 break;
             case 'enzo':
-                const ex = myPos.current.x + Math.cos(facingAngle.current) * 240, ey = myPos.current.y + Math.sin(facingAngle.current) * 240;
+                // Dash
+                const ex = myPos.current.x + Math.cos(facingAngle.current) * 300, ey = myPos.current.y + Math.sin(facingAngle.current) * 300;
                 myPos.current.x = Math.max(0, Math.min(MAP_WIDTH * TILE_SIZE, ex)); myPos.current.y = Math.max(0, Math.min(MAP_HEIGHT * TILE_SIZE, ey));
                 break;
             case 'mayron':
@@ -485,7 +534,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     const dx = m.x - myPos.current.x, dy = m.y - myPos.current.y, d = Math.hypot(dx, dy);
                     if (d < 280) {
                         const sdmg = 65 * levelBonus;
-                        m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg);
+                        m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg, '#0d9488');
                         m.x -= (dx / d) * 180; m.y -= (dy / d) * 180;
                     }
                 });
@@ -502,16 +551,18 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
 
     const spawnDamage = (x, y, val) => damageRef.current.push({ x, y, value: Math.floor(val), anim: 0 });
 
-    const levelUp = () => {
-        statsRef.current.level++; statsRef.current.xp = 0;
-        statsRef.current.maxXp = Math.floor(30 + statsRef.current.level * 10);
-        statsRef.current.maxHp += 30; statsRef.current.hp = statsRef.current.maxHp;
-        statsRef.current.maxMana += 15; statsRef.current.mana = statsRef.current.maxMana;
-    };
-
     const gainXp = (amount) => {
         statsRef.current.xp += amount;
-        if (statsRef.current.xp >= statsRef.current.maxXp) levelUp();
+        if (statsRef.current.xp >= statsRef.current.maxXp) {
+            statsRef.current.level++;
+            statsRef.current.xp -= statsRef.current.maxXp;
+            statsRef.current.maxXp = Math.floor(statsRef.current.maxXp * 1.5);
+            statsRef.current.maxHp += 20;
+            statsRef.current.hp = statsRef.current.maxHp;
+            statsRef.current.atk += 1;
+            statsRef.current.range += 1;
+            spawnDamage(myPos.current.x, myPos.current.y, "LEVEL UP!", "#ffd700");
+        }
     };
 
     const savePlayerStats = async () => {
@@ -636,7 +687,90 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             )}
 
             {/* Music Player */}
-            <MusicPlayer />
+            {settings.showMusicBtn && <MusicPlayer />}
+
+            {/* Settings Toggle */}
+            <button
+                onClick={() => setShowSettings(!showSettings)}
+                style={{
+                    position: 'fixed',
+                    top: '10px',
+                    right: '10px',
+                    background: 'rgba(0,0,0,0.6)',
+                    border: '1px solid #ffd700',
+                    color: '#ffd700',
+                    padding: '8px',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    zIndex: 200,
+                    fontFamily: 'VT323'
+                }}
+            >
+                SETTINGS
+            </button>
+
+            {/* Settings Modal */}
+            {showSettings && (
+                <div style={{
+                    position: 'fixed',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    background: '#1a1a1a',
+                    border: '4px solid #ffd700',
+                    padding: '20px',
+                    zIndex: 300,
+                    fontFamily: 'VT323',
+                    color: '#fff',
+                    maxWidth: '300px',
+                    width: '90%'
+                }}>
+                    <h2 style={{ color: '#ffd700', marginTop: 0 }}>OPÇÕES DO REINO</h2>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <input
+                                type="checkbox"
+                                checked={settings.showMyName}
+                                onChange={(e) => {
+                                    const newSet = { ...settings, showMyName: e.target.checked };
+                                    setSettings(newSet);
+                                    localStorage.setItem('gameSettings', JSON.stringify(newSet));
+                                }}
+                            />
+                            MOSTRAR MEU NOME
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <input
+                                type="checkbox"
+                                checked={settings.showMusicBtn}
+                                onChange={(e) => {
+                                    const newSet = { ...settings, showMusicBtn: e.target.checked };
+                                    setSettings(newSet);
+                                    localStorage.setItem('gameSettings', JSON.stringify(newSet));
+                                }}
+                            />
+                            BOTÃO DE MÚSICA
+                        </label>
+                    </div>
+                    <button
+                        onClick={() => setShowSettings(false)}
+                        className="btn-primary"
+                        style={{ marginTop: '20px', width: '100%' }}
+                    >
+                        FECHAR
+                    </button>
+                </div>
+            )}
+            {/* Next Wave Button (Host Only) */}
+            {isHost.current && monstersRef.current.length === 0 && (
+                <button
+                    onClick={() => supabase.from('rooms').update({ wave: waveStats.current.current + 1 }).eq('id', roomId)}
+                    className="btn-primary"
+                    style={{ background: '#166534', marginTop: '10px' }}
+                >
+                    PRÓXIMA ONDA ⚔️
+                </button>
+            )}
 
             {/* Mobile Controls */}
             {isMobile && (

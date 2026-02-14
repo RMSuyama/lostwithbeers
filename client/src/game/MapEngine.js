@@ -288,358 +288,176 @@ const CHAMPION_SKINS = {
         ctx.arc(x, y + 8, 15, 0.2 * Math.PI, 0.8 * Math.PI);
         ctx.stroke();
     },
-    rafarofa: (ctx, x, y, anim, color, angle) => {
-        ctx.lineWidth = 5; ctx.strokeStyle = '#92400e';
-        ctx.fillStyle = '#f59e0b';
+    shiryu: (ctx, x, y, anim, color, angle) => {
+        // DRAGON ANCESTRAL
+        ctx.lineWidth = 5; ctx.strokeStyle = '#064e3b';
+        ctx.fillStyle = '#065f46';
 
-        // Body
-        ctx.beginPath(); ctx.arc(x, y, 18, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-
-        // DETAILED GUITAR
-        ctx.fillStyle = '#78350f';
-        const gR = Math.sin(anim) * 0.3;
-        ctx.save();
-        ctx.translate(x - 28, y + 8);
-        ctx.rotate(gR);
-
-        // Guitar body
+        // Dragon Body (serpentine)
         ctx.beginPath();
-        ctx.roundRect(-10, -15, 20, 30, 5);
+        const wave = Math.sin(anim * 2) * 10;
+        ctx.ellipse(x, y, 22, 16 + wave / 2, 0, 0, Math.PI * 2);
         ctx.fill(); ctx.stroke();
 
-        // Sound hole
-        ctx.fillStyle = '#000';
-        ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill();
+        // Glowing Core
+        ctx.shadowBlur = 15; ctx.shadowColor = '#34d399';
+        ctx.fillStyle = '#6ee7b7';
+        ctx.beginPath(); ctx.arc(x, y - 5, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
 
-        // Strings
-        ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
-        for (let i = -4; i <= 4; i += 2) {
-            ctx.beginPath(); ctx.moveTo(i, -15); ctx.lineTo(i, 15); ctx.stroke();
+        // Dragon Horns
+        ctx.fillStyle = '#064e3b';
+        ctx.beginPath(); ctx.moveTo(x - 5, y - 15); ctx.lineTo(x - 12, y - 25); ctx.lineTo(x - 2, y - 15); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(x + 5, y - 15); ctx.lineTo(x + 12, y - 25); ctx.lineTo(x + 2, y - 15); ctx.fill();
+
+        // Spirit Orbs
+        for (let i = 0; i < 3; i++) {
+            const ox = x + Math.cos(anim + i * 2) * 30;
+            const oy = y + Math.sin(anim + i * 2) * 30;
+            ctx.fillStyle = '#34d399';
+            ctx.beginPath(); ctx.arc(ox, oy, 4, 0, Math.PI * 2); ctx.fill();
         }
-
-        // Guitar neck
-        ctx.fillStyle = '#451a03';
-        ctx.fillRect(-3, -30, 6, 18);
-
-        // Tuning pegs
-        ctx.fillStyle = '#fef3c7';
-        [-4, -2, 0, 2, 4].forEach(i => {
-            ctx.beginPath(); ctx.arc(i, -28, 2, 0, Math.PI * 2); ctx.fill();
-        });
-
-        ctx.restore();
-
-        // Musical notes floating
-        ctx.fillStyle = '#f59e0b';
-        ctx.font = 'bold 16px Arial';
-        const noteX = Math.sin(anim * 3) * 20;
-        const noteY = Math.cos(anim * 2) * 15 - 30;
-        ctx.fillText('♪', x + noteX, y + noteY);
-        ctx.fillText('♫', x - noteX + 5, y + noteY - 8);
     },
     charles: (ctx, x, y, anim, color, angle) => {
-        const dir = (Math.round(angle / (Math.PI / 4)) + 8) % 8;
-        const isRight = dir === 7 || dir === 0 || dir === 1;
-        const isLeft = dir >= 3 && dir <= 5;
-
+        // J. CHARLES - BATERISTA
         ctx.lineWidth = 5; ctx.strokeStyle = '#0f172a';
         ctx.fillStyle = '#475569';
 
-        // Cowboy body
+        // Body (Leather Jacket)
         ctx.beginPath(); ctx.roundRect(x - 16, y - 14, 32, 28, 6); ctx.fill(); ctx.stroke();
 
-        // Cowboy hat
-        ctx.fillStyle = '#78350f';
-        ctx.beginPath();
-        ctx.ellipse(x, y - 25, 20, 8, 0, 0, Math.PI * 2);
-        ctx.fill(); ctx.stroke();
-        ctx.beginPath();
-        ctx.ellipse(x, y - 28, 12, 6, 0, 0, Math.PI * 2);
-        ctx.fill(); ctx.stroke();
-
-        // Eyes
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(x - 6, y - 8, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + 6, y - 8, 4, 0, Math.PI * 2); ctx.fill();
+        // Sunglasses
         ctx.fillStyle = '#000';
-        ctx.beginPath(); ctx.arc(x - 5, y - 8, 2, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + 5, y - 8, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillRect(x - 12, y - 8, 24, 6);
 
-        // DUAL PISTOLS with recoil and smoke
-        ctx.fillStyle = '#1e293b'; ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
-        const recoil = Math.abs(Math.sin(anim * 2)) * 8;
-        const smokeAlpha = Math.max(0, Math.sin(anim * 2));
+        // Baquetas Energizadas
+        ctx.strokeStyle = '#facc15'; ctx.lineWidth = 4;
+        const bY = Math.sin(anim * 10) * 15;
+        ctx.beginPath(); ctx.moveTo(x - 25, y); ctx.lineTo(x - 35, y - 10 + bY); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x + 25, y); ctx.lineTo(x + 35, y - 10 - bY); ctx.stroke();
 
-        // Right pistol
-        ctx.fillRect(x + 20 - recoil, y - 6, 22, 10);
-        ctx.strokeRect(x + 20 - recoil, y - 6, 22, 10);
-        ctx.fillStyle = '#94a3b8';
-        ctx.fillRect(x + 42 - recoil, y - 4, 4, 6);
-
-        // Muzzle flash
-        if (smokeAlpha > 0.5) {
-            ctx.fillStyle = `rgba(255, 193, 7, ${smokeAlpha})`;
-            ctx.beginPath();
-            ctx.arc(x + 46 - recoil, y - 1, 6, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        // Left pistol
+        // Floating Drums
         ctx.fillStyle = '#1e293b';
-        ctx.fillRect(x - 42 + recoil, y - 6, 22, 10);
-        ctx.strokeRect(x - 42 + recoil, y - 6, 22, 10);
-        ctx.fillStyle = '#94a3b8';
-        ctx.fillRect(x - 46 + recoil, y - 4, 4, 6);
-
-        if (smokeAlpha > 0.5) {
-            ctx.fillStyle = `rgba(255, 193, 7, ${smokeAlpha})`;
-            ctx.beginPath();
-            ctx.arc(x - 50 + recoil, y - 1, 6, 0, Math.PI * 2);
-            ctx.fill();
-        }
+        ctx.beginPath(); ctx.ellipse(x, y + 30, 25, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     },
     kleyiton: (ctx, x, y, anim, color, angle) => {
-        ctx.lineWidth = 5; ctx.strokeStyle = '#451a03';
-        ctx.fillStyle = '#d97706';
+        // DESIGNER DAS ENGRENAGENS
+        ctx.lineWidth = 5; ctx.strokeStyle = '#431407';
+        ctx.fillStyle = '#c084fc'; // Tech Purple/Hologram
 
-        // Engineer body (boxy)
-        ctx.beginPath(); ctx.roundRect(x - 20, y - 20, 40, 40, 6); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.roundRect(x - 18, y - 18, 36, 36, 4); ctx.fill(); ctx.stroke();
 
-        // Goggles
-        ctx.fillStyle = '#0ea5e9'; ctx.strokeStyle = '#000';
-        ctx.beginPath(); ctx.arc(x - 8, y - 8, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-        ctx.beginPath(); ctx.arc(x + 8, y - 8, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        // Holographic Mochila
+        ctx.globalAlpha = 0.6;
+        ctx.fillStyle = '#22d3ee';
+        ctx.fillRect(x - 12, y + 18, 24, 10);
 
-        // Goggle strap
-        ctx.strokeStyle = '#451a03'; ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(x, y - 8, 20, 0, Math.PI, true);
-        ctx.stroke();
-
-        // Mechanical backpack/turret
-        ctx.fillStyle = '#78350f'; ctx.strokeStyle = '#451a03'; ctx.lineWidth = 5;
-        const pB = Math.sin(anim) * 5;
-        const backpackY = y + 18 + pB;
-
-        ctx.fillRect(x - 14, backpackY, 28, 16);
-        ctx.strokeRect(x - 14, backpackY, 28, 16);
-
-        // Turret barrel
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(x - 3, backpackY - 10, 6, 12);
-        ctx.strokeRect(x - 3, backpackY - 10, 6, 12);
-
-        // Mechanical pipes
-        ctx.strokeStyle = '#92400e'; ctx.lineWidth = 3;
-        [[-10, backpackY], [10, backpackY]].forEach(([px, py]) => {
-            ctx.beginPath();
-            ctx.moveTo(px, py);
-            ctx.lineTo(px, py - 8);
-            ctx.stroke();
-        });
-
-        // Steam/gears animation
-        ctx.fillStyle = `rgba(203, 213, 225, ${Math.abs(Math.sin(anim * 2)) * 0.6})`;
-        ctx.beginPath();
-        ctx.arc(x - 10, backpackY + 8, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(x + 10, backpackY + 8, 4, 0, Math.PI * 2);
-        ctx.fill();
+        // Projected Icons
+        const float = Math.sin(anim * 3) * 10;
+        ctx.font = '12px Courier';
+        ctx.fillText('{}', x - 25, y - 25 + float);
+        ctx.fillText('</>', x + 15, y - 20 - float);
+        ctx.globalAlpha = 1.0;
     },
     gusto: (ctx, x, y, anim, color, angle) => {
-        ctx.lineWidth = 5; ctx.strokeStyle = '#451a03';
-        ctx.fillStyle = '#92400e';
+        // ALQUIMISTA DA TAVERNA
+        ctx.lineWidth = 5; ctx.strokeStyle = '#064e3b';
+        ctx.fillStyle = '#fff'; // White Lab Coat
 
-        // BARREL BODY with realistic wood texture
-        ctx.beginPath(); ctx.ellipse(x, y, 26, 28, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.roundRect(x - 16, y - 18, 32, 36, 10); ctx.fill(); ctx.stroke();
 
-        // Barrel bands (metal hoops)
-        ctx.strokeStyle = '#78350f'; ctx.lineWidth = 6;
-        [-12, 0, 12].forEach(yOff => {
-            ctx.beginPath();
-            ctx.ellipse(x, y + yOff, 28, 6, 0, 0, Math.PI * 2);
-            ctx.stroke();
-        });
+        // Green Apron
+        ctx.fillStyle = '#059669';
+        ctx.fillRect(x - 10, y, 20, 18);
 
-        // Wood planks texture
-        ctx.strokeStyle = '#451a03'; ctx.lineWidth = 2;
-        for (let i = -20; i <= 20; i += 8) {
-            ctx.beginPath();
-            ctx.moveTo(x + i, y - 28);
-            ctx.lineTo(x + i, y + 28);
-            ctx.stroke();
-        }
-
-        // Tap/spigot
-        ctx.fillStyle = '#78350f';
-        ctx.fillRect(x + 20, y - 4, 12, 8);
-        ctx.strokeRect(x + 20, y - 4, 12, 8);
-
-        // Beer foam on top
-        ctx.fillStyle = '#fef3c7';
-        ctx.beginPath();
-        ctx.arc(x - 8, y - 28, 8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(x + 6, y - 30, 6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(x, y - 32, 7, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Mug in hand
-        ctx.fillStyle = '#92400e';
-        const mugX = x - 30;
-        const mugSwing = Math.sin(anim) * 5;
-        ctx.fillRect(mugX - 6, y + mugSwing - 8, 12, 16);
-        ctx.strokeRect(mugX - 6, y + mugSwing - 8, 12, 16);
-
-        // Mug handle
-        ctx.beginPath();
-        ctx.arc(mugX + 8, y + mugSwing, 4, -Math.PI / 2, Math.PI / 2);
-        ctx.stroke();
+        // Chemical Backpack with Vapor
+        ctx.fillStyle = '#10b981';
+        ctx.fillRect(x - 12, y + 18, 24, 10);
+        ctx.shadowBlur = 10; ctx.shadowColor = '#34d399';
+        ctx.beginPath(); ctx.arc(x + 10, y + 25, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
     },
     milan: (ctx, x, y, anim, color, angle) => {
-        ctx.globalAlpha = 0.6;
-        ctx.lineWidth = 5; ctx.strokeStyle = '#701a75';
-        ctx.fillStyle = '#c026d3';
+        // CARTISTA FANTASMA
+        ctx.lineWidth = 5; ctx.strokeStyle = '#4c1d95';
+        ctx.fillStyle = '#a78bfa';
 
-        // GHOST BODY - wispy and ethereal
-        ctx.beginPath();
-        ctx.moveTo(x - 22, y + 25);
-        ctx.quadraticCurveTo(x - 15, y - 50, x, y - 55);
-        ctx.quadraticCurveTo(x + 15, y - 50, x + 22, y + 25);
+        ctx.beginPath(); ctx.ellipse(x, y, 20, 24, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
-        // Wispy tail
-        const tailX1 = x + Math.sin(anim * 2) * 12;
-        const tailX2 = x - Math.sin(anim * 2 + 1) * 10;
-        const tailX3 = x + Math.sin(anim * 2 + 2) * 8;
-        ctx.lineTo(tailX1, y + 40);
-        ctx.lineTo(tailX2, y + 38);
-        ctx.lineTo(tailX3, y + 42);
-        ctx.closePath();
-        ctx.fill(); ctx.stroke();
+        // Poker Hat
+        ctx.fillStyle = '#1e1b4b';
+        ctx.fillRect(x - 15, y - 35, 30, 10);
+        ctx.fillRect(x - 20, y - 25, 40, 4);
 
-        ctx.globalAlpha = 1.0;
-
-        // Glowing eyes with eerie effect
-        const eyeGlow = Math.abs(Math.sin(anim * 3)) * 0.5 + 0.5;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = '#c026d3';
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(x - 8, y - 15, 6, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + 8, y - 15, 6, 0, Math.PI * 2); ctx.fill();
-
-        // Pupils
-        ctx.fillStyle = '#9333ea';
-        ctx.beginPath(); ctx.arc(x - 8, y - 15, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + 8, y - 15, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.shadowBlur = 0;
-
-        // Ghostly chains
-        ctx.globalAlpha = 0.5;
-        ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 3;
-        const chainSwing = Math.sin(anim) * 15;
-        ctx.beginPath();
-        ctx.moveTo(x - 15, y);
-        ctx.lineTo(x - 25 + chainSwing, y + 20);
-        ctx.lineTo(x - 30 + chainSwing, y + 35);
-        ctx.stroke();
-        ctx.globalAlpha = 1.0;
+        // Floating Cards
+        for (let i = 0; i < 4; i++) {
+            const cx = x + Math.cos(anim * 2 + i * 1.5) * 35;
+            const cy = y + Math.sin(anim * 2 + i * 1.5) * 35;
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(cx - 5, cy - 8, 10, 16);
+            ctx.strokeRect(cx - 5, cy - 8, 10, 16);
+        }
     },
     enzo: (ctx, x, y, anim, color, angle) => {
-        ctx.lineWidth = 5; ctx.strokeStyle = '#0c4a6e';
-        ctx.fillStyle = '#0284c7';
+        // ASSASSINO ELÉTRICO
+        ctx.lineWidth = 5; ctx.strokeStyle = '#1e3a8a';
+        ctx.fillStyle = '#3b82f6';
 
-        // Electric ball body
-        ctx.beginPath(); ctx.arc(x, y, 18, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x - 15, y + 20); ctx.lineTo(x, y - 25); ctx.lineTo(x + 15, y + 20); ctx.closePath(); ctx.fill(); ctx.stroke();
 
-        // Lightning core
-        ctx.fillStyle = '#7dd3fc';
-        ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.fill();
+        // Electric Guitar
+        ctx.strokeStyle = '#ef4444';
+        ctx.strokeRect(x - 25, y - 5, 50, 8);
 
-        // Electric arcs
-        ctx.strokeStyle = '#7dd3fc'; ctx.lineWidth = 3;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = '#0284c7';
-
-        const arcCount = 6;
-        for (let i = 0; i < arcCount; i++) {
-            const angle = (i / arcCount) * Math.PI * 2 + anim;
-            const dist = 22 + Math.sin(anim * 3 + i) * 5;
-            const x1 = x + Math.cos(angle) * dist;
-            const y1 = y + Math.sin(angle) * dist;
-
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(x1, y1);
-            ctx.stroke();
-
-            // Spark at end
-            ctx.fillStyle = '#fff';
-            ctx.beginPath(); ctx.arc(x1, y1, 3, 0, Math.PI * 2); ctx.fill();
+        // Electricity
+        ctx.shadowBlur = 15; ctx.shadowColor = '#60a5fa';
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+        for (let i = 0; i < 3; i++) {
+            ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (Math.random() - 0.5) * 60, y + (Math.random() - 0.5) * 60); ctx.stroke();
         }
-
         ctx.shadowBlur = 0;
-
-        // Electric halo (pulsing)
-        ctx.strokeStyle = '#7dd3fc'; ctx.lineWidth = 4;
-        const hS = Math.sin(anim * 3) * 8;
-        ctx.beginPath(); ctx.arc(x, y, 25 + hS, 0, Math.PI * 2); ctx.stroke();
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(x, y, 32 + hS * 1.5, 0, Math.PI * 2); ctx.stroke();
     },
     mayron: (ctx, x, y, anim, color, angle) => {
-        ctx.lineWidth = 5; ctx.strokeStyle = '#0f766e';
-        ctx.fillStyle = '#14b8a6';
+        // SENHOR DOS PORTOS
+        ctx.lineWidth = 5; ctx.strokeStyle = '#064e3b';
+        ctx.fillStyle = '#0d9488';
 
-        // Water elemental body
-        ctx.beginPath(); ctx.arc(x, y, 20, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.roundRect(x - 18, y - 20, 36, 40, 4); ctx.fill(); ctx.stroke();
 
-        // Water droplet core
-        ctx.fillStyle = '#5eead4';
-        ctx.beginPath();
-        ctx.arc(x, y - 4, 12, Math.PI, 0);
-        ctx.quadraticCurveTo(x + 12, y + 4, x, y + 12);
-        ctx.quadraticCurveTo(x - 12, y + 4, x - 12, y - 4);
-        ctx.closePath();
-        ctx.fill();
+        // Port Chains
+        ctx.strokeStyle = '#94a3b8';
+        const shift = Math.sin(anim * 4) * 10;
+        ctx.beginPath(); ctx.moveTo(x - 25 + shift, y - 25); ctx.lineTo(x - 25 + shift, y + 35); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x + 25 - shift, y - 25); ctx.lineTo(x + 25 - shift, y + 35); ctx.stroke();
+    },
+    klebao: (ctx, x, y, anim, color, angle) => {
+        // THE LEGEND: KLEBÃO
+        ctx.lineWidth = 5; ctx.strokeStyle = '#000';
 
-        // Orbiting water rings
-        ctx.strokeStyle = '#5eead4'; ctx.lineWidth = 6;
-        const wO = anim * 2;
+        // Jeans (Blue)
+        ctx.fillStyle = '#1e40af';
+        ctx.fillRect(x - 14, y, 28, 20);
 
-        // Ring 1  
-        ctx.beginPath();
-        ctx.ellipse(x, y, 38, 12, wO, 0, Math.PI * 2);
-        ctx.stroke();
+        // White Shirt
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(x - 15, y - 20, 30, 22);
+        ctx.strokeRect(x - 15, y - 20, 30, 22);
 
-        // Ring 2 (perpendicular)
-        ctx.beginPath();
-        ctx.ellipse(x, y, 38, 12, wO + Math.PI / 2, 0, Math.PI * 2);
-        ctx.stroke();
+        // Strong Arms
+        ctx.fillStyle = '#fdbaf8'; // Skin tone
+        ctx.fillRect(x - 25, y - 15, 10, 15);
+        ctx.fillRect(x + 15, y - 15, 10, 15);
 
-        // Water droplets orbiting
-        const droplets = [
-            { angle: wO, dist: 38 },
-            { angle: wO + Math.PI, dist: 38 },
-            { angle: wO + Math.PI / 2, dist: 38 },
-            { angle: wO + 3 * Math.PI / 2, dist: 38 }
-        ];
-
-        ctx.fillStyle = '#14b8a6';
-        droplets.forEach(drop => {
-            const dx = x + Math.cos(drop.angle) * drop.dist;
-            const dy = y + Math.sin(drop.angle) * drop.dist * 0.3;
-            ctx.beginPath(); ctx.arc(dx, dy, 5, 0, Math.PI * 2); ctx.fill();
-        });
-
-        // Bubbles
-        ctx.fillStyle = 'rgba(94, 234, 212, 0.4)';
-        const bubbleY = y - 25 - (anim % 2) * 15;
-        ctx.beginPath(); ctx.arc(x - 5, bubbleY, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + 7, bubbleY - 8, 3, 0, Math.PI * 2); ctx.fill();
+        // THE LEGENDARY CHINELO BRANCO
+        ctx.save();
+        ctx.translate(x + 20, y + 5);
+        ctx.rotate(Math.sin(anim * 5) * 0.5);
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.ellipse(0, 0, 8, 14, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        // Straps
+        ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(-4, -5); ctx.lineTo(0, 5); ctx.lineTo(4, -5); ctx.stroke();
+        ctx.restore();
     },
     default: (ctx, x, y, anim, color, angle) => {
         ctx.lineWidth = 5; ctx.strokeStyle = '#000';
@@ -739,6 +557,7 @@ export class MapRenderer {
 
         const offsetX = Math.floor(canvas.width / 2 - camera.x);
         const offsetY = Math.floor(canvas.height / 2 - camera.y);
+        const settings = JSON.parse(localStorage.getItem('gameSettings') || '{"showMyName": true}');
 
         const startX = Math.floor(-offsetX / TILE_SIZE);
         const endX = Math.floor((canvas.width - offsetX) / TILE_SIZE) + 1;
@@ -780,11 +599,18 @@ export class MapRenderer {
             skin(ctx, 0, 0, entity.walkTimer || 0, entity.color, entity.angle || 0);
             ctx.restore();
 
-            ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center';
-            ctx.fillText(entity.name, ex, ey - 35 + bobY);
+            const isMe = entity.id === camera.followId;
+            if (!isMe || settings.showMyName) {
+                ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center';
+                ctx.fillText(entity.name, ex, ey - 35 + bobY);
 
-            ctx.fillStyle = '#333'; ctx.fillRect(ex - 15, ey - 32 + bobY, 30, 4);
-            ctx.fillStyle = '#ef4444'; ctx.fillRect(ex - 15, ey - 32 + bobY, (entity.hp / entity.maxHp) * 30, 4);
+                // Champion Class Name
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; ctx.font = 'italic 10px Arial';
+                ctx.fillText(entity.championId?.toUpperCase() || '', ex, ey - 22 + bobY);
+            }
+
+            ctx.fillStyle = '#333'; ctx.fillRect(ex - 15, ey - 48 + bobY, 30, 4);
+            ctx.fillStyle = '#ef4444'; ctx.fillRect(ex - 15, ey - 48 + bobY, (entity.hp / entity.maxHp) * 30, 4);
         });
 
         monsters.forEach(m => {

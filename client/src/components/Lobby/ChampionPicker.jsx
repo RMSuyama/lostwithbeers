@@ -2,17 +2,18 @@ import React from 'react';
 import './Lobby.css';
 
 const CHAMPIONS = [
-    { id: 'jaca', name: 'Jaca', description: 'Assassino: Rápido e agressivo com seu facão.', color: '#15803d', theme: '🐊' },
-    { id: 'djox', name: 'Djox', description: 'Lutador: Impacto pesado com âncora abissal.', color: '#334155', theme: '🦈' },
-    { id: 'brunao', name: 'Brunão', description: 'Tanque: O guardião cor-de-rosa com seu escudo.', color: '#db2777', theme: '🐬' },
-    { id: 'jubarbie', name: 'Jubarbie', description: 'Colosso: Titã do oceano de impacto massivo.', color: '#1e3a8a', theme: '🐋' },
-    { id: 'shiryusuyama', name: 'Shiryu Suyama', description: 'Dragão: Mestre dos céus com poder ancestral.', color: '#dc2626', theme: '🐉' },
-    { id: 'charles', name: 'J. Charles', description: 'Atirador: Precisão naval com pistolas duplas.', color: '#475569', theme: '🔫' },
-    { id: 'kleyiton', name: 'Kleyiton', description: 'Engenheiro: Mestre das engenhocas e torretas.', color: '#b45309', theme: '⚙️' },
-    { id: 'gusto', name: 'Gusto', description: 'Brutamontes: O taverneiro que arremessa barris.', color: '#78350f', theme: '🍻' },
-    { id: 'milan', name: 'Milan', description: 'Estrategista: Místico espectral e ilusionista.', color: '#4a044e', theme: '🧠' },
-    { id: 'enzo', name: 'Enzo', description: 'Assassino: Corsário elétrico de alta mobilidade.', color: '#0369a1', theme: '⚡' },
-    { id: 'mayron', name: 'Mayron', description: 'Controle: Senhor das correntes e ventos.', color: '#0d9488', theme: '🌪️' },
+    { id: 'jaca', name: 'Jaca', description: 'Assassino: O predador do mangue rápido e agressivo.', color: '#15803d', theme: '🐊' },
+    { id: 'djox', name: 'Djox', description: 'Lutador: O executor abissal com sua âncora.', color: '#334155', theme: '🦈' },
+    { id: 'brunao', name: 'Brunão', description: 'Tanque: O guardião do porto e protetor da tripulação.', color: '#db2777', theme: '🐬' },
+    { id: 'jubarbie', name: 'Jubarbie', description: 'Colosso: O titã das marés de impacto massivo.', color: '#1e3a8a', theme: '🐋' },
+    { id: 'shiryu', name: 'Shiryu Suyama', description: 'Mago/DPS: O dragão ancestral de poder espiritual.', color: '#064e3b', theme: '🐲' },
+    { id: 'charles', name: 'J. Charles', description: 'DPS Rítmico: O baterista de guerra do porto.', color: '#475569', theme: '🥁' },
+    { id: 'gusto', name: 'Gusto', description: 'Mago Químico: Alquimista mestre em reações tóxicas.', color: '#78350f', theme: '🧪' },
+    { id: 'kleyiton', name: 'Kleyiton', description: 'Controle: Designer que projeta campos geométricos.', color: '#b45309', theme: '🎨' },
+    { id: 'milan', name: 'Milan', description: 'Ilusionista: O cartista fantasma mestre do blefe.', color: '#4a044e', theme: '🃏' },
+    { id: 'enzo', name: 'Enzo', description: 'Assassino: O corsário elétrico das cordas.', color: '#0369a1', theme: '🎸' },
+    { id: 'mayron', name: 'Mayron', description: 'Controle: O senhor dos portos e das correntes.', color: '#0d9488', theme: '🌪️' },
+    { id: 'klebao', name: 'Klebão', description: 'Bruiser: O imperador lendário do chinelo branco.', color: '#ffffff', theme: '🩴' },
 ];
 
 const ChampionPicker = ({ onSelect, selectedId }) => {
