@@ -39,10 +39,20 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const [players, setPlayers] = useState([]);
     const [isMounted, setIsMounted] = useState(false);
     const [gameState, setGameState] = useState('playing'); // playing, dead, over, victory
+    const gameStateRef = useRef(gameState);
+    useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
+
     const [showEscMenu, setShowEscMenu] = useState(false);
+    const showEscMenuRef = useRef(showEscMenu);
+    useEffect(() => { showEscMenuRef.current = showEscMenu; }, [showEscMenu]);
+
     const [isMobile, setIsMobile] = useState(false);
     const isHost = useRef(false);
     const activeVirtualKeys = useRef(new Set());
+    const championIdRef = useRef(championId);
+    useEffect(() => { championIdRef.current = championId; }, [championId]);
+    const playerNameRef = useRef(playerName);
+    useEffect(() => { playerNameRef.current = playerName; }, [playerName]);
     const keys = useRef({});
 
     // Refs for Loop performance & Fresh state
@@ -53,6 +63,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const projectilesRef = useRef([]);
     const damageRef = useRef([]);
     const baseHpRef = useRef(1000);
+    const waveStats = useRef({ current: 0, timer: 60, totalMobs: 0, deadMobs: 0 });
     const walkTimerRef = useRef(0);
     const lastPosRef = useRef({ x: 400, y: 400 });
     const statsRef = useRef({
@@ -70,8 +81,10 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         const saved = localStorage.getItem('gameSettings');
         return saved ? JSON.parse(saved) : { showMyName: true, showMusicBtn: true, controlMode: 'both' };
     });
-    const [showSettings, setShowSettings] = useState(false);
+    const settingsRef = useRef(settings);
+    useEffect(() => { settingsRef.current = settings; }, [settings]);
 
+    const [showSettings, setShowSettings] = useState(false);
     const [uiStats, setUiStats] = useState({ ...statsRef.current });
     const [waveUi, setWaveUi] = useState({ current: 0, timer: 60, total: 0, dead: 0, baseHp: 1000 });
 
@@ -424,7 +437,10 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             const key = e.key.toLowerCase();
             if (key === 'escape') { setShowEscMenu(prev => !prev); return; }
             keys.current[key] = true;
-            if (gameState !== 'playing' || showEscMenu) return;
+
+            // USE REFS for state checks inside listeners to avoid stale closures
+            if (gameStateRef.current !== 'playing' || showEscMenuRef.current) return;
+
             // Attack and skills (only on press)
             if (key === 'q') basicAttack();
             if (['1', '2', '3', '4'].includes(key)) useSkill();
@@ -433,12 +449,12 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         const handleKeyUp = (e) => keys.current[e.key.toLowerCase()] = false;
 
         const moveLoop = setInterval(() => {
-            if (gameState !== 'playing' || showEscMenu) return;
+            if (gameStateRef.current !== 'playing' || showEscMenuRef.current) return;
             const speed = 5;
             let mx = 0, my = 0;
             const vKeys = activeVirtualKeys.current;
             const k = keys.current;
-            const mode = settings.controlMode || 'both';
+            const mode = settingsRef.current.controlMode || 'both';
 
             // Movement Logic - Combined for responsiveness
             const up = ((mode === 'both' || mode === 'arrows') && (k['arrowup'] || vKeys.has('ArrowUp'))) || ((mode === 'both' || mode === 'wasd') && k['w']);
@@ -477,11 +493,11 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
         };
-    }, [championId, gameState, showEscMenu, settings]);
+    }, []); // Only run once, using REFS for everything inside
 
 
     const basicAttack = () => {
-        const champ = getChamp(championId);
+        const champ = getChamp(championIdRef.current);
         const angle = facingAngle.current;
         const dmg = Math.floor(statsRef.current.atk); // Use direct statsRef for base 1 + lvl scaling
 
@@ -514,7 +530,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     };
 
     const useSkill = () => {
-        const champ = getChamp(championId);
+        const champ = getChamp(championIdRef.current);
         if (statsRef.current.mana < champ.skill.cost) return;
         statsRef.current.mana -= champ.skill.cost;
         const levelBonus = 1 + (statsRef.current.level * 0.25);
