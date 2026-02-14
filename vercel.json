@@ -1,7 +1,8 @@
 {
+    "version": 2,
+    "buildCommand": "npm run build",
+    "outputDirectory": "client/dist",
     "framework": "vite",
-    "buildCommand": "vite build",
-    "outputDirectory": "dist",
     "rewrites": [
         {
             "source": "/(.*)",
