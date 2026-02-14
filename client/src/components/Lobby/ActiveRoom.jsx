@@ -162,17 +162,7 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
         await supabase.from('players').delete().eq('id', playerId);
     };
 
-    const randomizeTeams = async () => {
-        if (!me?.is_host) return;
-        const shuffled = [...players].sort(() => Math.random() - 0.5);
-        const updates = shuffled.map((p, i) => ({
-            id: p.id,
-            team_id: i < Math.ceil(players.length / 2) ? 1 : 2
-        }));
-        for (const update of updates) {
-            await supabase.from('players').update({ team_id: update.team_id }).eq('id', update.id);
-        }
-    };
+    // Team randomization removed - Co-op only
 
     const startGame = async () => {
         if (!me?.is_host) return;
@@ -214,11 +204,7 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
                     )}
                 </div>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
-                    {me?.is_host && (
-                        <button onClick={randomizeTeams} className="btn-primary" style={{ padding: '0.4rem 0.8rem' }}>
-                            SORTEAR TIMES
-                        </button>
-                    )}
+                    {/* Team Randomization Button Removed */}
                     <button onClick={leaveRoom} className="btn-primary" style={{ background: '#451010', padding: '0.4rem 0.8rem' }}>
                         <LogOut size={20} style={{ marginRight: '8px' }} /> ABANDONAR
                     </button>
@@ -231,30 +217,17 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
                         <ChampionPicker onSelect={selectChampion} selectedId={me?.champion_id} />
                     </div>
 
-                    <div className="main-content-layout" style={{ maxWidth: 'none' }}>
-                        <div className="team-column">
-                            <h3 className="team-header team-1-header">DEFENSORES (PORTO)</h3>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                {team1.map(p => (
+                    <div className="main-content-layout" style={{ maxWidth: 'none', justifyContent: 'center' }}>
+                        <div className="team-column" style={{ width: '100%', maxWidth: '800px' }}>
+                            <h3 className="team-header team-1-header" style={{ background: '#333', borderColor: '#ffd700' }}>HERÓIS DO REINO ({players.length}/10)</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                {players.map(p => (
                                     <PlayerSlot key={p.id} player={p} isMe={p.id === me?.id} isHost={me?.is_host} onKick={() => kickPlayer(p.id)} />
                                 ))}
-                                {Array.from({ length: Math.max(0, 5 - team1.length) }).map((_, i) => (
-                                    <div key={`empty-1-${i}`} className="player-slot" style={{ opacity: 0.2, borderStyle: 'dashed' }}>VAGA ABERTA</div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="team-column">
-                            <h3 className="team-header team-2-header">INVASORES (MAR)</h3>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                {team1.length > 5 && team1.slice(5).map(p => (
-                                    <PlayerSlot key={p.id} player={p} isMe={p.id === me?.id} isHost={me?.is_host} onKick={() => kickPlayer(p.id)} />
-                                ))}
-                                {team2.map(p => (
-                                    <PlayerSlot key={p.id} player={p} isMe={p.id === me?.id} isHost={me?.is_host} onKick={() => kickPlayer(p.id)} />
-                                ))}
-                                {Array.from({ length: Math.max(0, 5 - team2.length) }).map((_, i) => (
-                                    <div key={`empty-2-${i}`} className="player-slot" style={{ opacity: 0.2, borderStyle: 'dashed' }}>VAGA ABERTA</div>
+                                {Array.from({ length: Math.max(0, 10 - players.length) }).map((_, i) => (
+                                    <div key={`empty-${i}`} className="player-slot" style={{ opacity: 0.2, borderStyle: 'dashed' }}>
+                                        VAGA ABERTA
+                                    </div>
                                 ))}
                             </div>
                         </div>

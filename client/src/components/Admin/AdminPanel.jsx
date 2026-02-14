@@ -95,7 +95,7 @@ const AdminPanel = ({ session }) => {
                 <div className="stat-card" style={cardStyle}>
                     <Users size={32} color="#3b82f6" />
                     <div>
-                        <div style={{ fontSize: '2rem' }}>{stats.rooms.length || 0}</div>
+                        <div style={{ fontSize: '2rem' }}>{stats.rooms.length}</div>
                         <div style={{ opacity: 0.7 }}>SALAS ATIVAS</div>
                     </div>
                 </div>
@@ -141,6 +141,50 @@ const AdminPanel = ({ session }) => {
                 </table>
                 {onlineUsers.length === 0 && (
                     <div style={{ padding: '20px', textAlign: 'center', opacity: 0.5 }}>Nenhum usuário detectado (além de você?)...</div>
+                )}
+            </div>
+
+            <h2 style={{ fontSize: '2rem', borderBottom: '1px solid #333', paddingBottom: '10px', marginTop: '40px' }}>GERENCIAMENTO DE SALAS</h2>
+            <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '8px', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '1.2rem' }}>
+                    <thead style={{ background: '#111', color: '#888' }}>
+                        <tr>
+                            <th style={thStyle}>NOME DA SALA</th>
+                            <th style={thStyle}>ID</th>
+                            <th style={thStyle}>STATUS</th>
+                            <th style={thStyle}>AÇÕES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {stats.rooms && stats.rooms.map((r, i) => (
+                            <tr key={r.id} style={{ borderBottom: '1px solid #222', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+                                <td style={tdStyle}>{r.name}</td>
+                                <td style={tdStyle}><span style={{ fontSize: '0.8rem', opacity: 0.7 }}>{r.id}</span></td>
+                                <td style={tdStyle}>
+                                    <span style={{
+                                        padding: '2px 8px',
+                                        borderRadius: '4px',
+                                        background: r.status === 'playing' ? '#ef4444' : '#eab308',
+                                        color: '#000',
+                                        fontSize: '0.9rem'
+                                    }}>
+                                        {r.status === 'playing' ? 'EM JOGO' : 'AGUARDANDO'}
+                                    </span>
+                                </td>
+                                <td style={tdStyle}>
+                                    <button
+                                        onClick={() => deleteRoom(r.id)}
+                                        style={{ background: '#b91c1c', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontFamily: 'VT323' }}
+                                    >
+                                        FECHAR SALA
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                {stats.rooms.length === 0 && (
+                    <div style={{ padding: '20px', textAlign: 'center', opacity: 0.5 }}>Nenhuma sala ativa no momento.</div>
                 )}
             </div>
 

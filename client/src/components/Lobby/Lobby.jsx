@@ -153,8 +153,7 @@ const Lobby = ({ playerName, setPlayerName, user }) => {
                     user_id: user?.id,
                     name: playerName,
                     is_host: isHost,
-                    is_ready: false,
-                    team_id: 1
+                    is_ready: false
                 }]);
 
             if (error) throw error;
@@ -179,7 +178,7 @@ const Lobby = ({ playerName, setPlayerName, user }) => {
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
                     <p className="lobby-subtitle">UMA LENDA DO PORTO DO REINO</p>
                     <div style={{ display: 'flex', gap: '10px' }}>
-                        {user?.email === 'admin@lwb.com' && (
+                        {user?.email?.toLowerCase() === 'admin@lwb.com' && (
                             <button
                                 onClick={() => navigate('/admin')}
                                 className="btn-primary"
