@@ -34,6 +34,7 @@ const SPAWN_POS = { x: 3000, y: 3000 };
 
 const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const canvasRef = useRef(null);
+    const minimapCanvasRef = useRef(null);
     const engineRef = useRef(null);
     const [players, setPlayers] = useState([]);
     const [isMounted, setIsMounted] = useState(false);
@@ -142,6 +143,25 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 });
             }
         }, 50);
+
+        // Pre-render Minimap Static Layer
+        setTimeout(() => {
+            if (minimapCanvasRef.current && engineRef.current?.mapData) {
+                const mk = minimapCanvasRef.current.getContext('2d');
+                const grid = engineRef.current.mapData.grid;
+                mk.clearRect(0, 0, 180, 180);
+                const ts = 180 / 100; // Map is 100x100
+                for (let y = 0; y < 100; y++) {
+                    for (let x = 0; x < 100; x++) {
+                        const tile = grid[y][x];
+                        if (tile === 2 || tile === 3 || tile === 5) {
+                            mk.fillStyle = tile === 2 ? '#0ea5e9' : (tile === 5 ? '#92400e' : '#475569');
+                            mk.fillRect(x * ts, y * ts, ts + 0.1, ts + 0.1);
+                        }
+                    }
+                }
+            }
+        }, 1000); // Wait for engine to init
 
         let animationFrame;
         let lastTime = Date.now();
@@ -705,21 +725,8 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     boxShadow: '5px 5px #000',
                     pointerEvents: 'none'
                 }}>
-                    <div style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0.3 }}>
-                        {/* Static Obstacles on Minimap */}
-                        {engineRef.current?.mapData?.grid.map((row, y) =>
-                            row.map((tile, x) => (
-                                (tile === 2 || tile === 3 || tile === 5) && (
-                                    <div key={`${x}-${y}`} style={{
-                                        position: 'absolute',
-                                        left: `${x}%`,
-                                        top: `${y}%`,
-                                        width: '1%', height: '1%',
-                                        background: tile === 2 ? '#0ea5e9' : (tile === 5 ? '#92400e' : '#475569')
-                                    }} />
-                                )
-                            ))
-                        )}
+                    <div style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0.5 }}>
+                        <canvas ref={minimapCanvasRef} width={180} height={180} style={{ width: '100%', height: '100%' }} />
                     </div>
                     <div style={{ position: 'absolute', width: '100%', height: '100%' }}>
                         {players.map(p => (
