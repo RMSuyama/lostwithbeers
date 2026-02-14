@@ -68,7 +68,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
 
     const [settings, setSettings] = useState(() => {
         const saved = localStorage.getItem('gameSettings');
-        return saved ? JSON.parse(saved) : { showMyName: true, showMusicBtn: true };
+        return saved ? JSON.parse(saved) : { showMyName: true, showMusicBtn: true, controlMode: 'both' };
     });
     const [showSettings, setShowSettings] = useState(false);
 
@@ -437,11 +437,19 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             const speed = 5; let mx = 0, my = 0;
             const vKeys = activeVirtualKeys.current;
             const k = keys.current;
+            const mode = settings.controlMode || 'both';
 
-            if (k['arrowup'] || k['w'] || vKeys.has('ArrowUp')) my -= speed;
-            if (k['arrowdown'] || k['s'] || vKeys.has('ArrowDown')) my += speed;
-            if (k['arrowleft'] || k['a'] || vKeys.has('ArrowLeft')) mx -= speed;
-            if (k['arrowright'] || k['d'] || vKeys.has('ArrowRight')) mx += speed;
+            if ((mode === 'both' || mode === 'arrows') && (k['arrowup'] || vKeys.has('ArrowUp'))) my -= speed;
+            else if ((mode === 'both' || mode === 'wasd') && k['w']) my -= speed;
+
+            if ((mode === 'both' || mode === 'arrows') && (k['arrowdown'] || vKeys.has('ArrowDown'))) my += speed;
+            else if ((mode === 'both' || mode === 'wasd') && k['s']) my += speed;
+
+            if ((mode === 'both' || mode === 'arrows') && (k['arrowleft'] || vKeys.has('ArrowLeft'))) mx -= speed;
+            else if ((mode === 'both' || mode === 'wasd') && k['a']) mx -= speed;
+
+            if ((mode === 'both' || mode === 'arrows') && (k['arrowright'] || vKeys.has('ArrowRight'))) mx += speed;
+            else if ((mode === 'both' || mode === 'wasd') && k['d']) mx += speed;
 
             if (mx !== 0 || my !== 0) {
                 const nextX = Math.max(0, Math.min(MAP_WIDTH * TILE_SIZE, myPos.current.x + mx));
@@ -890,6 +898,22 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                             />
                             BOTÃO DE MÚSICA
                         </label>
+                        <div style={{ marginTop: '10px' }}>
+                            <div style={{ color: '#ffd700', marginBottom: '5px' }}>MODO DE CONTROLE:</div>
+                            <select
+                                value={settings.controlMode || 'both'}
+                                onChange={(e) => {
+                                    const newSet = { ...settings, controlMode: e.target.value };
+                                    setSettings(newSet);
+                                    localStorage.setItem('gameSettings', JSON.stringify(newSet));
+                                }}
+                                style={{ background: '#222', color: '#fff', border: '1px solid #ffd700', padding: '5px', width: '100%', fontFamily: 'VT323' }}
+                            >
+                                <option value="both">HÍBRIDO (WASD + SETAS)</option>
+                                <option value="arrows">APENAS SETAS</option>
+                                <option value="wasd">APENAS WASD</option>
+                            </select>
+                        </div>
                     </div>
                     <button
                         onClick={() => setShowSettings(false)}
