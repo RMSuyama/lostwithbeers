@@ -181,8 +181,7 @@ const Lobby = ({ playerName, setPlayerName, user }) => {
                         {(user?.email?.trim().toLowerCase() === 'admin@lwb.com' || user?.email === 'admin@lwb.com') && (
                             <button
                                 onClick={() => navigate('/admin')}
-                                className="btn-primary"
-                                style={{ background: '#7c3aed', color: '#fff', fontSize: '1rem', padding: '5px 10px' }}
+                                className="btn-primary admin-btn"
                             >
                                 <Shield size={16} style={{ marginRight: '5px' }} />
                                 ADMIN
@@ -190,13 +189,7 @@ const Lobby = ({ playerName, setPlayerName, user }) => {
                         )}
                         <button
                             onClick={() => setShowStats(!showStats)}
-                            className="btn-primary"
-                            style={{
-                                background: showStats ? '#ef4444' : '#ffd700',
-                                fontSize: '1.2rem',
-                                padding: '5px 15px',
-                                color: '#000'
-                            }}
+                            className={`btn-primary toggle-stats-btn ${showStats ? 'active' : ''}`}
                         >
                             {showStats ? 'FECHAR ESTATÍSTICAS' : 'VER ESTATÍSTICAS'}
                         </button>
@@ -216,17 +209,10 @@ const Lobby = ({ playerName, setPlayerName, user }) => {
                                 <label className="label-technical">NOME DO GUERREIRO</label>
                                 <input
                                     type="text"
-                                    className="hero-text-input"
+                                    className="hero-text-input hero-input-disabled"
                                     value={playerName}
                                     onChange={(e) => setPlayerName(e.target.value)}
                                     disabled={true}
-                                    style={{
-                                        cursor: 'not-allowed',
-                                        opacity: 0.7,
-                                        border: '2px solid #555',
-                                        background: 'rgba(0,0,0,0.5)',
-                                        color: '#aaa'
-                                    }}
                                 />
                                 <div style={{ fontSize: '0.8rem', color: '#ffd700', marginTop: '4px', opacity: 0.8, textAlign: 'center' }}>
                                     Vinculado a: {user?.email}
@@ -280,14 +266,7 @@ const Lobby = ({ playerName, setPlayerName, user }) => {
 
             {/* Stats Panel Overlay */}
             {showStats && (
-                <div style={{
-                    position: 'fixed',
-                    inset: 0,
-                    background: 'rgba(0,0,0,0.95)',
-                    zIndex: 998,
-                    overflowY: 'auto',
-                    padding: '80px 20px 20px 20px'
-                }}>
+                <div className="stats-overlay">
                     <PlayerStats user={user} />
                 </div>
             )}

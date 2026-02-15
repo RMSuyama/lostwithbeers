@@ -96,12 +96,19 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
     };
 
     const fetchPlayers = async () => {
-        const { data } = await supabase
+        console.log('[ActiveRoom] Fetching players for room:', roomId);
+        const { data, error } = await supabase
             .from('players')
             .select('*')
             .eq('room_id', roomId)
             .order('joined_at', { ascending: true });
 
+        if (error) {
+            console.error('[ActiveRoom] Error fetching players:', error);
+            return;
+        }
+
+        console.log('[ActiveRoom] Players fetched:', data);
         const playerList = data || [];
         setPlayers(playerList);
 
@@ -112,7 +119,7 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
         // Self-Healing: If no host exists, promote the oldest player (index 0)
         const hasHost = playerList.some(p => p.is_host);
         if (playerList.length > 0 && !hasHost) {
-            console.warn('Room has no host! Promoting oldest player...');
+            console.warn('[ActiveRoom] Room has no host! Promoting oldest player...');
             const oldestPlayer = playerList[0];
 
             // Optimistic update locally to show UI immediately
@@ -133,8 +140,15 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
 
         // If I was in a room but my record is gone, leave
         if (playerList.length > 0 && !myPlayer) {
+            console.warn('[ActiveRoom] My player record not found, leaving room.');
             leaveRoom();
         }
+    };
+
+    const refreshRoom = () => {
+        console.log('[ActiveRoom] Manual Refresh Triggered');
+        fetchRoom();
+        fetchPlayers();
     };
 
     const toggleReady = async () => {
@@ -214,15 +228,16 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
                 readyCount={players.filter(p => p.is_ready).length}
                 onLeave={leaveRoom}
                 onForceStart={forceStart}
+                onRefresh={refreshRoom}
             />
 
             <div className="active-room-main-layout">
                 <main>
-                    <div className="panel-zelda" style={{ flexShrink: 0 }}>
+                    <div className="panel-zelda no-shrink">
                         <ChampionPicker onSelect={selectChampion} selectedId={me?.champion_id} />
                     </div>
 
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                    <div className="flex-column-full">
                         <PlayerList
                             players={players}
                             me={me}
