@@ -36,3 +36,4 @@ const LoadingScreen = ({ text = "Carregando..." }) => {
 };
 
 export default LoadingScreen;
+// Force rebuild
