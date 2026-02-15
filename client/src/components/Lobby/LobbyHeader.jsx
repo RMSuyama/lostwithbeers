@@ -1,32 +1,40 @@
 import React from 'react';
-import { LogOut } from 'lucide-react';
+import { Sword, Shield } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-const LobbyHeader = ({ roomId, isHost, roomStatus, playerCount, readyCount, onLeave, onForceStart }) => {
+const LobbyHeader = ({ user, handleLogout, showStats, setShowStats }) => {
+    const navigate = useNavigate();
+
     return (
-        <header className="active-room-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
-                <div>
-                    <h1 className="lobby-title">LWB - REINO: {roomId.substring(0, 8).toUpperCase()}</h1>
-                    {isHost && (
-                        <div className="host-debug-panel" style={{ fontSize: '0.8rem', color: '#ff4444', border: '1px solid #ff4444', padding: '2px 4px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span>HOST</span>
-                            <span>| STATUS: {roomStatus}</span>
-                            <span>| JOGADORES: {playerCount}</span>
-                            <span>| PRONTOS: {readyCount}</span>
-                            <button
-                                onClick={onForceStart}
-                                style={{ background: 'red', color: 'white', border: 'none', padding: '2px 4px', cursor: 'pointer', fontSize: '0.7rem' }}
-                            >
-                                FORÇAR
-                            </button>
-                        </div>
-                    )}
+        <header className="lobby-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                <div className="logo-container">
+                    <Sword className="icon-gold" size={64} />
+                    <h1 className="lobby-title">LWB - Lost With Beers</h1>
                 </div>
-            </div>
-            <div>
-                <button onClick={onLeave} className="btn-primary" style={{ background: '#451010', fontSize: '0.9rem' }}>
-                    <LogOut size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} /> SAIR
+                <button onClick={handleLogout} className="btn-primary" style={{ height: 'fit-content', background: '#333' }}>
+                    LOGOUT
                 </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                <p className="lobby-subtitle">UMA LENDA DO PORTO DO REINO</p>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    {(user?.email?.trim().toLowerCase() === 'admin@lwb.com' || user?.email === 'admin@lwb.com') && (
+                        <button
+                            onClick={() => navigate('/admin')}
+                            className="btn-primary admin-btn"
+                        >
+                            <Shield size={16} style={{ marginRight: '5px' }} />
+                            ADMIN
+                        </button>
+                    )}
+                    <button
+                        onClick={() => setShowStats(!showStats)}
+                        className={`btn-primary toggle-stats-btn ${showStats ? 'active' : ''}`}
+                    >
+                        {showStats ? 'FECHAR ESTATÍSTICAS' : 'VER ESTATÍSTICAS'}
+                    </button>
+                </div>
             </div>
         </header>
     );

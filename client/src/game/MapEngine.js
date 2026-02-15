@@ -1,5 +1,6 @@
 import { TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, TILE_TYPES } from './constants';
-import { CHAMPION_SKINS, getChamp } from './Champions';
+import { CHAMPION_SKINS } from './renderers/ChampionRenderer';
+import { getChamp } from './Champions';
 
 export const generateMap = (seed = 0) => {
     // Better Random

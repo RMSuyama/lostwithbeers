@@ -8,6 +8,8 @@ import AdminPanel from './components/Admin/AdminPanel';
 import Game from './game/Game';
 import './index.css';
 
+import loadingBg from './loading_bg.png';
+
 const ProtectedRoute = ({ children, session }) => {
     if (!session) return <Navigate to="/login" replace />;
     return children;
@@ -69,7 +71,7 @@ function App() {
             color: '#ffd700',
             fontFamily: 'VT323',
             fontSize: '2rem',
-            backgroundImage: `url(/src/loading_bg.png)`,
+            backgroundImage: `url(${loadingBg})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             textShadow: '2px 2px 0 #000'

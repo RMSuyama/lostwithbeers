@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import { Sword, Shield, Lock } from 'lucide-react';
 
+import loadingBg from '../../loading_bg.png';
+
 const Auth = () => {
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState('');
@@ -36,7 +38,7 @@ const Auth = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundImage: `url(/src/loading_bg.png)`,
+            backgroundImage: `url(${loadingBg})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             fontFamily: 'VT323, monospace'
