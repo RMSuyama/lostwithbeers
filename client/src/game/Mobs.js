@@ -1,4 +1,4 @@
-import { BASE_POS, TILE_SIZE } from './constants';
+import { POSITIONS, TILE_SIZE } from './constants';
 
 export const updateMobs = (monsters, playerPos, engine, dt, gameState, setGameState, spawnDamage, stats, baseHpRef) => {
     const now = Date.now();
@@ -16,8 +16,8 @@ export const updateMobs = (monsters, playerPos, engine, dt, gameState, setGameSt
         }
 
         const distPlayer = Math.hypot(playerPos.x - m.x, playerPos.y - m.y);
-        const dxBase = BASE_POS.x - m.x;
-        const dyBase = BASE_POS.y - m.y;
+        const dxBase = POSITIONS.BASE.x - m.x;
+        const dyBase = POSITIONS.BASE.y - m.y;
         const distBase = Math.hypot(dxBase, dyBase);
 
         // Movement Helper (Sliding)
@@ -63,13 +63,13 @@ export const updateMobs = (monsters, playerPos, engine, dt, gameState, setGameSt
         } else {
             // Move toward Base
             if (distBase > 60) {
-                moveToward(BASE_POS.x, BASE_POS.y);
+                moveToward(POSITIONS.BASE.x, POSITIONS.BASE.y);
             } else {
                 // Attack Base
                 if (!m.lastAttack || now - m.lastAttack > 1500) {
                     baseHpRef.current -= 15;
                     m.lastAttack = now;
-                    spawnDamage(BASE_POS.x, BASE_POS.y, 15);
+                    spawnDamage(POSITIONS.BASE.x, POSITIONS.BASE.y, 15);
                     if (baseHpRef.current <= 0) setGameState('over');
                 }
             }

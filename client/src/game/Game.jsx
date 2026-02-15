@@ -9,12 +9,12 @@ import { MobSystem } from './systems/MobSystem';
 import { CombatSystem } from './systems/CombatSystem';
 
 // Modules
-import { TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, BASE_POS, SPAWN_POS_L, SPAWN_POS_R } from './constants';
+import { TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, POSITIONS } from './constants';
 import { CHAMPIONS, getChamp } from './Champions';
 
 // Assets
 // Assets
-// import jacaSprite from '../Jaca, o pirata crocodilo em 8 direções.png'; // Missing Asset
+// import jacaSprite
 
 const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const canvasRef = useRef(null);
@@ -35,9 +35,9 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
 
     const playersRef = useRef([]);
-    const myPos = useRef({ x: BASE_POS.x + Math.random() * 50, y: BASE_POS.y + Math.random() * 50 });
+    const myPos = useRef({ x: POSITIONS.BASE.x + Math.random() * 50, y: POSITIONS.BASE.y + Math.random() * 50 });
     const facingAngle = useRef(0);
-    const cameraRef = useRef({ x: BASE_POS.x, y: BASE_POS.y });
+    const cameraRef = useRef({ x: POSITIONS.BASE.x, y: POSITIONS.BASE.y });
     const keys = useRef({});
     const lastTimeRef = useRef(Date.now());
     const walkTimerRef = useRef(0);
