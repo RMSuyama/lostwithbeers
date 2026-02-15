@@ -1,4 +1,6 @@
-import { BASE_POS, TILE_SIZE, SPAWN_POS_L, SPAWN_POS_R } from '../constants';
+import { POSITIONS, TILE_SIZE, SPAWN_POS_L, SPAWN_POS_R } from '../constants';
+
+const BASE_POS = POSITIONS.BASE;
 
 export class MobSystem {
     constructor(isHost) {
