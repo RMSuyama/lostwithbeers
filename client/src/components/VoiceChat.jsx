@@ -3,7 +3,7 @@ import Peer from 'peerjs';
 import { Mic, MicOff, Headphones, VolumeX } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
-const VoiceChat = ({ roomId, userId, playerName, muted = false }) => {
+const VoiceChat = ({ roomId, userId, playerName, muted = false, minimal = false }) => {
     const [peerId, setPeerId] = useState('');
     const [peers, setPeers] = useState({}); // { [peerId]: call }
     const [isMuted, setIsMuted] = useState(muted);
@@ -16,7 +16,7 @@ const VoiceChat = ({ roomId, userId, playerName, muted = false }) => {
     useEffect(() => {
         // Initialize Peer
         const peer = new Peer(undefined, {
-            host: '0.peerjs.com', // Using public PeerJS server for prototype
+            host: '0.peerjs.com',
             port: 443,
             path: '/'
         });
@@ -26,14 +26,11 @@ const VoiceChat = ({ roomId, userId, playerName, muted = false }) => {
             setPeerId(id);
             peerRef.current = peer;
 
-            // Signal my PeerID to the room via Supabase
-            // We use a specific channel for signaling to avoid cluttering game state
             const channel = supabase.channel(`voice-${roomId}`);
             channel
                 .on('broadcast', { event: 'signal' }, handleSignal)
                 .subscribe(async (status) => {
                     if (status === 'SUBSCRIBED') {
-                        // Announce myself
                         await channel.send({
                             type: 'broadcast',
                             event: 'signal',
@@ -44,7 +41,6 @@ const VoiceChat = ({ roomId, userId, playerName, muted = false }) => {
         });
 
         peer.on('call', (call) => {
-            console.log('[VOICE] Incoming call from', call.peer);
             call.answer(myStreamRef.current);
             handleCall(call);
         });
@@ -53,7 +49,6 @@ const VoiceChat = ({ roomId, userId, playerName, muted = false }) => {
         navigator.mediaDevices.getUserMedia({ audio: true, video: false })
             .then((stream) => {
                 myStreamRef.current = stream;
-                // Mute initial track if needed
                 stream.getAudioTracks()[0].enabled = !isMuted;
             })
             .catch(err => console.error('[VOICE] Failed to get local stream', err));
@@ -75,10 +70,9 @@ const VoiceChat = ({ roomId, userId, playerName, muted = false }) => {
 
     const handleSignal = (payload) => {
         const data = payload.payload;
-        if (data.userId === userId) return; // Ignore self
+        if (data.userId === userId) return;
 
         if (data.type === 'join') {
-            console.log('[VOICE] User joined:', data.name);
             connectToNewUser(data.peerId, myStreamRef.current);
         }
     };
@@ -91,13 +85,11 @@ const VoiceChat = ({ roomId, userId, playerName, muted = false }) => {
 
     const handleCall = (call) => {
         call.on('stream', (remoteStream) => {
-            // Create audio element
             const audio = document.createElement('audio');
             audio.srcObject = remoteStream;
             audio.addEventListener('loadedmetadata', () => {
                 audio.play();
             });
-            // Store call reference
             peersRef.current[call.peer] = { call, audio };
             setPeers(prev => ({ ...prev, [call.peer]: call }));
         });
@@ -122,6 +114,38 @@ const VoiceChat = ({ roomId, userId, playerName, muted = false }) => {
             if (audio) audio.muted = newVal;
         });
     };
+
+    if (minimal) {
+        return (
+            <div style={{
+                position: 'fixed', bottom: '20px', left: '20px',
+                zIndex: 1000, display: 'flex', gap: '10px', alignItems: 'center'
+            }}>
+                <button
+                    onClick={() => setIsMuted(!isMuted)}
+                    style={{
+                        background: isMuted ? 'rgba(239, 68, 68, 0.8)' : 'rgba(22, 101, 52, 0.8)',
+                        border: '2px solid #fff', borderRadius: '50%',
+                        width: '50px', height: '50px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', color: '#fff',
+                        boxShadow: '0 0 10px rgba(0,0,0,0.5)'
+                    }}
+                    title={isMuted ? "Mutado" : "Microfone Ativo"}
+                >
+                    {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
+                </button>
+                {Object.keys(peers).length > 0 && (
+                    <div style={{
+                        background: 'rgba(0,0,0,0.6)', padding: '4px 8px', borderRadius: '20px',
+                        color: '#ffd700', fontSize: '12px', whiteSpace: 'nowrap'
+                    }}>
+                        {Object.keys(peers).length + 1} ON
+                    </div>
+                )}
+            </div>
+        );
+    }
 
     return (
         <div style={{

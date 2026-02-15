@@ -109,6 +109,11 @@ export const generateMap = (seed = 0) => {
     return { grid, scales, collisions };
 };
 
+export const getMinimapData = (mapData) => {
+    // Return a simplified version for the UI or just the collisions map
+    return mapData.collisions;
+};
+
 export class MapRenderer {
     constructor(canvas, seed = 0) {
         this.canvas = canvas;

@@ -1,5 +1,4 @@
-import { getChamp } from './Champions';
-import { TILE_SIZE, MAP_WIDTH, MAP_HEIGHT } from './constants';
+import { PhysicsSystem } from './systems/PhysicsSystem';
 
 export const castSkill = (championId, player, monsters, projectiles, mapData, damageList, attackEffectRef) => {
     const champ = getChamp(championId);
@@ -128,10 +127,8 @@ export const castSkill = (championId, player, monsters, projectiles, mapData, da
             // This one modifies PLAYER Position directly. 
             // We need to return the new position or an effect indicating teleporation.
             const ex = myPos.x + Math.cos(facingAngle) * 300, ey = myPos.y + Math.sin(facingAngle) * 300;
-            const egx = Math.floor(ex / TILE_SIZE), egy = Math.floor(ey / TILE_SIZE);
-            const escale = mapData?.scales[egy]?.[egx] || 3;
-            if (escale < 3) {
-                return { totalDamage: 0, teleport: { x: Math.max(0, Math.min(MAP_WIDTH * TILE_SIZE, ex)), y: Math.max(0, Math.min(MAP_HEIGHT * TILE_SIZE, ey)) } };
+            if (PhysicsSystem.canPass(ex, ey, 'skill', mapData)) {
+                return { totalDamage: 0, teleport: { x: ex, y: ey } };
             }
             break;
         case 'mayron':

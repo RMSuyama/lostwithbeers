@@ -1,15 +1,9 @@
-import { POSITIONS, TILE_SIZE } from '../constants';
+import { PhysicsSystem } from './PhysicsSystem';
 
 const BASE_POS = POSITIONS.BASE;
 
 export class MobSystem {
-    constructor(isHost) {
-        this.isHost = isHost;
-        this.mobs = [];
-        this.waveStats = { current: 0, timer: 60, totalMobs: 0, deadMobs: 0 };
-    }
-
-    // --- HOST LOGIC ---
+    // ... rest of class ...
     update(dt, playerPositions, baseHpRef, spawnDamage, setGameState, engine) {
         if (!this.isHost) return { deadCount: 0, xpGain: 0, kills: 0 };
 
@@ -19,58 +13,54 @@ export class MobSystem {
         const now = Date.now();
 
         this.mobs.forEach(m => {
-            if (m.hp <= 0) return; // Skip dead awaiting cleanup
+            if (m.hp <= 0) return;
 
-            // 1. Target Selection (Closest Player or Base)
+            // 1. Target Selection (Prioritize closest Player, then Base)
             let target = { x: BASE_POS.x, y: BASE_POS.y, type: 'base' };
             let minDist = Infinity;
 
             playerPositions.forEach(p => {
                 const dist = Math.hypot(p.x - m.x, p.y - m.y);
-                if (dist < 400 && dist < minDist) { // Aggro range
+                if (dist < 500 && dist < minDist) { // Aggro range increased
                     minDist = dist;
                     target = { x: p.x, y: p.y, type: 'player', id: p.id };
                 }
             });
 
-            // 2. Movement (Simple seeking with pathing check)
+            // 2. Movement (Seeking with sliding collision)
             const angle = Math.atan2(target.y - m.y, target.x - m.x);
             const vx = Math.cos(angle) * m.speed;
             const vy = Math.sin(angle) * m.speed;
 
-            // Collision Check with Map
             let nextX = m.x + vx;
             let nextY = m.y + vy;
 
-            if (engine) {
-                const gX = Math.floor(nextX / TILE_SIZE);
-                const gY = Math.floor(nextY / TILE_SIZE);
-                // Simple wall check - if wall, don't move (or slide)
-                // For now, strict block:
-                if (engine.mapData.collisions[gY]?.[gX]) {
-                    nextX = m.x; // Block X
-                    nextY = m.y; // Block Y (Too simple, needs slide)
-                    // Slide Component
-                }
-            }
-            m.x = nextX;
-            m.y = nextY;
+            const map = engine?.mapData;
 
+            // Sliding Collision
+            if (PhysicsSystem.canMove(nextX, m.y, map)) {
+                m.x = nextX;
+            }
+            if (PhysicsSystem.canMove(m.x, nextY, map)) {
+                m.y = nextY;
+            }
+
+            // Entity-to-Entity Collision (Mobs avoiding each other)
+            PhysicsSystem.resolveEntityCollision(m, this.mobs, 15);
+            // Mobs also avoid players
+            PhysicsSystem.resolveEntityCollision(m, playerPositions, 20);
 
             // 3. Combat
             const distToTarget = Math.hypot(target.x - m.x, target.y - m.y);
-            if (distToTarget < 40) {
+            const aggroRange = target.type === 'player' ? 50 : 60; // Combat range
+
+            if (distToTarget < aggroRange) {
                 if (!m.lastAttack || now - m.lastAttack > 1000) {
                     m.lastAttack = now;
                     if (target.type === 'player') {
-                        // We can't easily damage remote players directly from here without authoritative server
-                        // For now, we spawn a visual damage number and rely on clients to trust the host?
-                        // OR: Host sends "DamagePlayer" event.
-                        // SIMPLIFICATION: We just spawn visual damage and update local state if it's the host player.
-                        // Proper way: Host tells Network "Player X take Y damage".
-                        spawnDamage(target.x, target.y, 10, '#ff0000');
+                        spawnDamage(target.x, target.y, 10 + (this.waveStats.current * 2), '#ff0000');
                     } else {
-                        baseHpRef.current -= 10;
+                        baseHpRef.current -= 10 + (this.waveStats.current * 5);
                         spawnDamage(BASE_POS.x, BASE_POS.y, 10, '#ff0000');
                         if (baseHpRef.current <= 0) setGameState('over');
                     }
@@ -85,6 +75,7 @@ export class MobSystem {
                 activeMobs.push(m);
             } else {
                 deadCount++;
+                this.waveStats.deadMobs++;
                 kills++;
                 xpGain += 2;
             }
@@ -120,6 +111,11 @@ export class MobSystem {
                 });
             }, offset);
         }
+    }
+
+    skipWaveWaiting() {
+        if (!this.isHost) return;
+        this.waveStats.timer = 0;
     }
 
     // --- CLIENT LOGIC ---

@@ -73,13 +73,17 @@ export const useLobby = (user, playerName) => {
     const checkAlreadyInRoom = async () => {
         const { data: activePlayer } = await supabase
             .from('players')
-            .select('room_id')
+            .select('room_id, rooms(name)')
             .eq('user_id', user.id)
             .single();
 
         if (activePlayer) {
-            alert('Você já está em uma sala! Saia da outra sessão primeiro.');
-            return true;
+            const force = window.confirm(`Herói, você já tem uma sessão ativa no reino "${activePlayer.rooms?.name || 'desconhecido'}". Deseja encerrar a sessão antiga e continuar aqui?`);
+            if (force) {
+                await supabase.from('players').delete().eq('user_id', user.id);
+                return false; // Liberado para seguir
+            }
+            return true; // Bloqueado por escolha do usuário
         }
         return false;
     };
