@@ -1,4 +1,4 @@
-import { POSITIONS, TILE_SIZE, SPAWN_POS_L, SPAWN_POS_R } from '../constants';
+import { POSITIONS, TILE_SIZE } from '../constants';
 
 const BASE_POS = POSITIONS.BASE;
 
@@ -105,7 +105,7 @@ export class MobSystem {
 
         for (let i = 0; i < count; i++) {
             const offset = i * 500; // Stagger spawns
-            const spawnSide = i % 2 === 0 ? SPAWN_POS_L : SPAWN_POS_R;
+            const spawnSide = i % 2 === 0 ? POSITIONS.SPAWN_L : POSITIONS.SPAWN_R;
 
             setTimeout(() => {
                 // Check if we didn't reset game in timeout
