@@ -149,6 +149,48 @@ export const CHAMPION_SKINS = {
         ctx.fillStyle = '#92400e';
         ctx.fillRect(x + 18, y - 5, 12, 3);
     },
+    poisoncraft: (ctx, x, y, anim, color, angle, assets, isMoving = true) => {
+        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets, isMoving);
+        ctx.save(); ctx.translate(x, y);
+        ctx.strokeStyle = '#4d7c0f'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(0, -10, 32 + Math.sin(anim * 5) * 2, 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
+    },
+    foxz: (ctx, x, y, anim, color, angle, assets, isMoving = true) => {
+        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets, isMoving);
+        ctx.save(); ctx.translate(x, y);
+        ctx.fillStyle = 'rgba(126, 34, 206, 0.2)';
+        ctx.beginPath(); ctx.arc(0, -10, 30, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+    },
+    peixe: (ctx, x, y, anim, color, angle, assets, isMoving = true) => {
+        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets, isMoving);
+        ctx.save(); ctx.translate(x, y);
+        ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(-15, -45); ctx.lineTo(15, -45);
+        ctx.moveTo(0, -60); ctx.lineTo(0, -30); ctx.stroke(); // Holy Cross/Star
+        ctx.restore();
+    },
+    dan: (ctx, x, y, anim, color, angle, assets, isMoving = true) => {
+        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets, isMoving);
+        ctx.save(); ctx.translate(x, y);
+        ctx.fillStyle = '#16a34a'; // Leaves
+        const rot = anim * 2;
+        for (let i = 0; i < 3; i++) {
+            ctx.save();
+            ctx.rotate(rot + (i * Math.PI * 2 / 3));
+            ctx.fillRect(25, 0, 8, 4);
+            ctx.restore();
+        }
+        ctx.restore();
+    },
+    huntskan: (ctx, x, y, anim, color, angle, assets, isMoving = true) => {
+        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets, isMoving);
+        ctx.save(); ctx.translate(x, y);
+        ctx.strokeStyle = '#0f766e'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 15, 25, 0, Math.PI); ctx.stroke(); // Water Ripple
+        ctx.restore();
+    },
     default: (ctx, x, y, anim, color, angle, assets, isMoving = true) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets, isMoving)
 };
 

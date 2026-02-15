@@ -11,6 +11,7 @@ import { CombatSystem } from './systems/CombatSystem';
 // Modules
 import { TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, POSITIONS } from './constants';
 import { CHAMPIONS, getChamp } from './Champions';
+import { castSkill } from './Skills';
 
 // Assets
 // Assets
@@ -323,7 +324,56 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         }
     };
 
-    const useSkill = () => { /* Placeholder for skill logic re-integration */ };
+    const useSkill = () => {
+        if (!combatRef.current || !mobSystemRef.current) return;
+        const champ = getChamp(championId);
+
+        // Mana check
+        if (statsRef.current.mana < champ.skill.cost) {
+            combatRef.current.spawnDamage(myPos.current.x, myPos.current.y, "NO MANA!", "#3b82f6");
+            return;
+        }
+
+        // Cooldown check
+        const now = Date.now();
+        if (statsRef.current.lastSkillTime && now - statsRef.current.lastSkillTime < champ.skill.cd) {
+            return;
+        }
+
+        console.log(`[SKILL] Casting ${champ.skill.name}...`);
+
+        // Execute Skill
+        const result = castSkill(
+            championId,
+            { ...myPos.current, angle: facingAngle.current, level: statsRef.current.level },
+            mobSystemRef.current.mobs,
+            combatRef.current.projectiles,
+            engineRef.current?.mapData,
+            combatRef.current.damageNumbers,
+            { current: null } // Temporary, Game.jsx doesn't use attackEffectRef yet for skills properly
+        );
+
+        // Deduct Mana
+        statsRef.current.mana -= champ.skill.cost;
+        statsRef.current.lastSkillTime = now;
+
+        // Visual Effect
+        combatRef.current.addAttackEffect(myPos.current.x, myPos.current.y, facingAngle.current, 'skill');
+
+        // Handle Results (Heal, etc.)
+        if (result.heal) {
+            statsRef.current.hp = Math.min(statsRef.current.maxHp, statsRef.current.hp + result.heal);
+            combatRef.current.spawnDamage(myPos.current.x, myPos.current.y, `+${Math.floor(result.heal)}`, "#22c55e");
+        }
+
+        if (result.teleport) {
+            myPos.current = { ...result.teleport };
+        }
+
+        if (result.totalDamage) {
+            statsRef.current.totalDamage += result.totalDamage;
+        }
+    };
     const dash = () => {
         const ddist = 140;
         const dx = Math.cos(facingAngle.current) * ddist;

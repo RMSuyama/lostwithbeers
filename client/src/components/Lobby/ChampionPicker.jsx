@@ -14,6 +14,11 @@ const CHAMPIONS = [
     { id: 'enzo', name: 'Enzo', description: 'Assassino: O corsário elétrico das cordas.', color: '#0369a1', theme: '🎸' },
     { id: 'mayron', name: 'Mayron', description: 'Controle: O senhor dos portos e das correntes.', color: '#0d9488', theme: '🌪️' },
     { id: 'klebao', name: 'Klebão', description: 'Bruiser: O imperador lendário do chinelo branco.', color: '#ffffff', theme: '🩴' },
+    { id: 'poisoncraft', name: 'Poisoncraft', description: 'Veneno: Baseado no Venomancer/Viper. DoT e Slow.', color: '#4d7c0f', theme: '🐍' },
+    { id: 'foxz', name: 'Foxz', description: 'Necro: Baseado no Warlock. Soul Drain e Life Steal.', color: '#7e22ce', theme: '💀' },
+    { id: 'peixe', name: 'Peixe', description: 'Paladino: Baseado no Paladino DPS. Holy Burst.', color: '#fbbf24', theme: '🐟' },
+    { id: 'dan', name: 'Dan', description: 'Druida: Baseado no Druida Resto. Cura Massiva.', color: '#16a34a', theme: '🌿' },
+    { id: 'huntskan', name: 'Huntskan', description: 'Naga: Baseado no Slardar. Stun e Atropelo.', color: '#0f766e', theme: '🔱' },
 ];
 
 const ChampionPicker = ({ onSelect, selectedId }) => {

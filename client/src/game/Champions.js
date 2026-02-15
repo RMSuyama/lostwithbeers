@@ -13,7 +13,12 @@ export const CHAMPIONS = {
     milan: { name: 'Milan', color: '#4a044e', hp: 70, mana: 160, basic: { range: 190, arc: 2.0, dmg: 1 }, skill: { name: 'Blefe Espectral', cost: 25, cd: 5000 } },
     enzo: { name: 'Enzo', color: '#0369a1', hp: 90, mana: 50, basic: { range: 100, arc: 2.2, dmg: 1 }, skill: { name: 'Riff Elétrico', cost: 12, cd: 3000 } },
     mayron: { name: 'Mayron', color: '#0d9488', hp: 110, mana: 100, basic: { range: 170, arc: 2.4, dmg: 1 }, skill: { name: 'Tide Wave', cost: 25, cd: 6000 } },
-    klebao: { name: 'Klebão', color: '#ffffff', hp: 200, mana: 100, basic: { range: 300, arc: 0.2, dmg: 1, ranged: true }, skill: { name: 'Julgamento Supremo', cost: 50, cd: 12000 } }
+    klebao: { name: 'Klebão', color: '#ffffff', hp: 200, mana: 100, basic: { range: 300, arc: 0.2, dmg: 1, ranged: true }, skill: { name: 'Julgamento Supremo', cost: 50, cd: 12000 } },
+    poisoncraft: { name: 'Poisoncraft', color: '#4d7c0f', hp: 100, mana: 120, basic: { range: 250, arc: 0.5, dmg: 1, ranged: true }, skill: { name: 'Venom Nova', cost: 40, cd: 8000 } },
+    foxz: { name: 'Foxz', color: '#7e22ce', hp: 90, mana: 140, basic: { range: 300, arc: 0.4, dmg: 1, ranged: true }, skill: { name: 'Soul Drain', cost: 35, cd: 7000 } },
+    peixe: { name: 'Peixe', color: '#fbbf24', hp: 160, mana: 80, basic: { range: 90, arc: 1.8, dmg: 1 }, skill: { name: 'Holy Burst', cost: 25, cd: 6000 } },
+    dan: { name: 'Dan', color: '#16a34a', hp: 110, mana: 150, basic: { range: 220, arc: 0.6, dmg: 1, ranged: true }, skill: { name: 'Rejuvenation', cost: 45, cd: 12000 } },
+    huntskan: { name: 'Huntskan', color: '#0f766e', hp: 180, mana: 60, basic: { range: 110, arc: 2.2, dmg: 1, kb: 40 }, skill: { name: 'Slithereen Crush', cost: 25, cd: 5000 } }
 };
 
 // Aliases
