@@ -77,7 +77,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     // MAIN INIT
     useEffect(() => {
         console.log(`[GAME] Init Room: ${roomId}`);
-        console.log("VERSION: BUILD_FIX_V3");
+        console.log("VERSION: BUILD_FIX_V7_CONSTANTS_FINAL");
 
         // 1. Initialize Engine
         const seed = Array.from(roomId).reduce((acc, char) => acc + char.charCodeAt(0), 0);
