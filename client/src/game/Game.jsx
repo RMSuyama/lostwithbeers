@@ -14,7 +14,6 @@ import { CHAMPIONS, getChamp } from './Champions';
 
 // Assets
 import jacaSprite from '../Jaca, o pirata crocodilo em 8 direções.png';
-import jacaAttack from '../Ataques do crocodilo com espada.png';
 
 const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const canvasRef = useRef(null);
@@ -84,9 +83,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
 
         // Load Assets
         const jSprite = new Image(); jSprite.src = jacaSprite;
-        const jAttack = new Image(); jAttack.src = jacaAttack;
         jSprite.onload = () => engineRef.current.jacaAssets = { ...engineRef.current.jacaAssets, sprite: jSprite };
-        jAttack.onload = () => engineRef.current.jacaAssets = { ...engineRef.current.jacaAssets, attack: jAttack };
 
         // 2. Check Host
         supabase.from('players').select('is_host').eq('room_id', roomId).eq('name', playerName).single()

@@ -257,18 +257,13 @@ export class MapRenderer {
 
         if (attackEffect) {
             ctx.save(); ctx.translate(attackEffect.x + offsetX, attackEffect.y + offsetY);
-            if (attackEffect.type === 'jaca' && this.jacaAssets?.attack?.complete) {
-                const assets = this.jacaAssets.attack; const sw = assets.width / 3; const sh = assets.height / 5;
-                const frame = Math.floor((Date.now() - attackEffect.time) / 50) % 3;
-                const dir = (Math.round(attackEffect.angle / (Math.PI / 4)) + 8) % 8;
-                let row = 0; if (dir === 6) row = 2; else if (dir === 4) row = 1; else if (dir === 0) row = 3; else if (dir === 1 || dir === 7) row = 4;
-                ctx.drawImage(assets, frame * sw, row * sh, sw, sh, -sw / 2, -sh / 2, sw, sh);
-            } else {
-                ctx.rotate(attackEffect.angle);
-                const gradient = ctx.createLinearGradient(0, 0, 60, 0);
-                gradient.addColorStop(0, 'rgba(255,255,255,0)'); gradient.addColorStop(0.5, 'rgba(255,255,255,0.8)'); gradient.addColorStop(1, 'rgba(255,255,255,0)');
-                ctx.fillStyle = gradient; ctx.beginPath(); ctx.arc(0, 0, 50, -0.8, 0.8); ctx.arc(0, 0, 30, 0.8, -0.8, true); ctx.fill();
-            }
+
+            // Fallback Animation (Simple slash/blast)
+            ctx.rotate(attackEffect.angle);
+            const gradient = ctx.createLinearGradient(0, 0, 60, 0);
+            gradient.addColorStop(0, 'rgba(255,255,255,0)'); gradient.addColorStop(0.5, 'rgba(255,255,255,0.8)'); gradient.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = gradient; ctx.beginPath(); ctx.arc(0, 0, 50, -0.8, 0.8); ctx.arc(0, 0, 30, 0.8, -0.8, true); ctx.fill();
+
             ctx.restore();
         }
 
