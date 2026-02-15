@@ -13,7 +13,8 @@ import { TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, BASE_POS, SPAWN_POS_L, SPAWN_POS_R } 
 import { CHAMPIONS, getChamp } from './Champions';
 
 // Assets
-import jacaSprite from '../Jaca, o pirata crocodilo em 8 direções.png';
+// Assets
+// import jacaSprite from '../Jaca, o pirata crocodilo em 8 direções.png'; // Missing Asset
 
 const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const canvasRef = useRef(null);
@@ -83,8 +84,9 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         engineRef.current = new MapRenderer(canvasRef.current, seed);
 
         // Load Assets
-        const jSprite = new Image(); jSprite.src = jacaSprite;
-        jSprite.onload = () => engineRef.current.jacaAssets = { ...engineRef.current.jacaAssets, sprite: jSprite };
+        // Load Assets
+        // const jSprite = new Image(); jSprite.src = jacaSprite;
+        // jSprite.onload = () => engineRef.current.jacaAssets = { ...engineRef.current.jacaAssets, sprite: jSprite };
 
         // 2. Check Host
         supabase.from('players').select('is_host').eq('room_id', roomId).eq('name', playerName).single()
