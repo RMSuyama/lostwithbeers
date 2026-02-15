@@ -1,5 +1,5 @@
 import React from 'react';
-import loadingBg from './loading_bg.png'; // Assuming it's in the same folder or adjust path
+import loadingBg from '../../loading_bg.png';
 
 const LoadingScreen = ({ text = "Carregando..." }) => {
     return (
