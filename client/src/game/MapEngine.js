@@ -295,7 +295,7 @@ export class MapRenderer {
         this.colors = {
             [TILE_TYPES.GRASS]: '#0b1a0b',     // The Loading Screen Background (Walkable)
             [TILE_TYPES.COBBLESTONE]: '#1a2f1a', // Slightly lighter
-            [TILE_TYPES.MURKY_WATER]: '#0a0f1e', // Dark Sea Blue (Abyss)
+            [TILE_TYPES.MURKY_WATER]: '#0f2347', // Rich Dark Sea Blue
             [TILE_TYPES.STONE_WALL]: '#143411',  // Dark Green Wall
             [TILE_TYPES.FORT_WOOD]: '#2a1a05',   // Wood
             [TILE_TYPES.CARGO_CRATE]: '#78350f',
@@ -304,8 +304,8 @@ export class MapRenderer {
 
     draw(entities, camera, dummies = [], monsters = [], projectiles = [], damageNumbers = [], attackEffect = null, baseHp = 1000, maxBaseHp = 1000, spawnPoints = []) {
         const { ctx, canvas } = this;
-        // Background: Abyss (Dark Sea Blue)
-        ctx.fillStyle = '#0a0f1e';
+        // Background: Abyss (Rich Dark Sea Blue)
+        ctx.fillStyle = '#0f2347';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         const offsetX = Math.floor(canvas.width / 2 - camera.x);

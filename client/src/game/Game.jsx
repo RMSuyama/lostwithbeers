@@ -302,20 +302,36 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 const dyBase = BASE_POS.y - m.y;
                 const distBase = Math.hypot(dxBase, dyBase);
 
-                // Aggro / Chasing
-                if (distPlayer < 400 && gameStateRef.current === 'playing') {
-                    const angle = Math.atan2(myPos.current.y - m.y, myPos.current.x - m.x);
-                    const nextX = m.x + Math.cos(angle) * m.speed;
-                    const nextY = m.y + Math.sin(angle) * m.speed;
+                // Movement Helper (Sliding)
+                const moveToward = (targetX, targetY) => {
+                    const angle = Math.atan2(targetY - m.y, targetX - m.x);
+                    const vx = Math.cos(angle) * m.speed;
+                    const vy = Math.sin(angle) * m.speed;
 
                     if (engineRef.current) {
-                        const gX = Math.floor(nextX / TILE_SIZE), gY = Math.floor(nextY / TILE_SIZE);
-                        if (!engineRef.current.mapData.collisions[gY]?.[gX]) {
-                            m.x = nextX; m.y = nextY;
+                        // Try X Movement
+                        const nextX = m.x + vx;
+                        const gX_x = Math.floor(nextX / TILE_SIZE);
+                        const gY_x = Math.floor(m.y / TILE_SIZE);
+                        if (!engineRef.current.mapData.collisions[gY_x]?.[gX_x]) {
+                            m.x = nextX;
+                        }
+
+                        // Try Y Movement
+                        const nextY = m.y + vy;
+                        const gX_y = Math.floor(m.x / TILE_SIZE);
+                        const gY_y = Math.floor(nextY / TILE_SIZE);
+                        if (!engineRef.current.mapData.collisions[gY_y]?.[gX_y]) {
+                            m.y = nextY;
                         }
                     } else {
-                        m.x = nextX; m.y = nextY;
+                        m.x += vx; m.y += vy;
                     }
+                };
+
+                // Aggro / Chasing
+                if (distPlayer < 400 && gameStateRef.current === 'playing') {
+                    moveToward(myPos.current.x, myPos.current.y);
 
                     // Attack Player
                     if (distPlayer < 40) {
@@ -329,18 +345,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 } else {
                     // Move toward Base
                     if (distBase > 60) {
-                        const angle = Math.atan2(dyBase, dxBase);
-                        const nextX = m.x + Math.cos(angle) * m.speed;
-                        const nextY = m.y + Math.sin(angle) * m.speed;
-
-                        if (engineRef.current) {
-                            const gX = Math.floor(nextX / TILE_SIZE), gY = Math.floor(nextY / TILE_SIZE);
-                            if (!engineRef.current.mapData.collisions[gY]?.[gX]) {
-                                m.x = nextX; m.y = nextY;
-                            }
-                        } else {
-                            m.x = nextX; m.y = nextY;
-                        }
+                        moveToward(BASE_POS.x, BASE_POS.y);
                     } else {
                         // Attack Base
                         if (!m.lastAttack || now - m.lastAttack > 1500) {
