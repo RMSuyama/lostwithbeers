@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import { Sword, Shield, Lock } from 'lucide-react';
+import { useModal } from '../../context/ModalContext';
 
 import loadingBg from '../../loading_bg.png';
 
 const Auth = () => {
+    const { showAlert } = useModal();
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -18,13 +20,13 @@ const Auth = () => {
             if (isSignUp) {
                 const { error } = await supabase.auth.signUp({ email, password });
                 if (error) throw error;
-                alert('Invocação enviada! Verifique seu e-mail para confirmar sua jornada.');
+                showAlert('Invocação enviada! Verifique seu e-mail para confirmar sua jornada.');
             } else {
                 const { error } = await supabase.auth.signInWithPassword({ email, password });
                 if (error) throw error;
             }
         } catch (error) {
-            alert('Falha na Missão: ' + error.message);
+            showAlert('Falha na Missão: ' + error.message);
         } finally {
             setLoading(false);
         }

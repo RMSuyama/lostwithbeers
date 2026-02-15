@@ -1,31 +1,33 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import { useNavigate } from 'react-router-dom';
+import { useModal } from '../../context/ModalContext';
 import { Shield, Users, AlertTriangle, Activity } from 'lucide-react';
 
 const AdminPanel = ({ session }) => {
     const navigate = useNavigate();
+    const { showAlert, showConfirm } = useModal();
     const [onlineUsers, setOnlineUsers] = useState([]);
     const [stats, setStats] = useState({ rooms: [], playing: 0 }); // Changed rooms to array
 
     const deleteRoom = async (roomId) => {
-        if (!window.confirm('Tem certeza que deseja fechar esta sala? Todos os jogadores serão desconectados.')) return;
+        if (!await showConfirm('Tem certeza que deseja fechar esta sala? Todos os jogadores serão desconectados.')) return;
 
         try {
             await supabase.from('players').delete().eq('room_id', roomId);
             await supabase.from('rooms').delete().eq('id', roomId);
             // Stats will auto-update via interval or we can force fetch
-            alert('Sala fechada com sucesso.');
+            showAlert('Sala fechada com sucesso.');
         } catch (error) {
             console.error('Erro ao fechar sala:', error);
-            alert('Erro ao fechar sala.');
+            showAlert('Erro ao fechar sala.');
         }
     };
 
     useEffect(() => {
         // Strict Admin Check
         if (session?.user?.email !== 'admin@lwb.com') {
-            alert('Acesso Negado: Área restrita a Administradores da LWB.');
+            showAlert('Acesso Negado: Área restrita a Administradores da LWB.');
             navigate('/lobby');
             return;
         }

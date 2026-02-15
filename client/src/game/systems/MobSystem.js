@@ -1,9 +1,17 @@
+import { POSITIONS, TILE_SIZE } from '../constants';
 import { PhysicsSystem } from './PhysicsSystem';
 
 const BASE_POS = POSITIONS.BASE;
 
 export class MobSystem {
-    // ... rest of class ...
+    constructor(isHost) {
+        this.isHost = isHost;
+        this.mobs = [];
+        this.waveStats = { current: 0, timer: 60, totalMobs: 0, deadMobs: 0 };
+        this.spawnTimeouts = [];
+    }
+
+    // --- HOST LOGIC ---
     update(dt, playerPositions, baseHpRef, spawnDamage, setGameState, engine) {
         if (!this.isHost) return { deadCount: 0, xpGain: 0, kills: 0 };
 
@@ -88,28 +96,53 @@ export class MobSystem {
     startWave(waveNum) {
         if (!this.isHost) return;
 
+        // Clear any lingering timeouts
+        this.spawnTimeouts.forEach(t => clearTimeout(t));
+        this.spawnTimeouts = [];
+
         this.waveStats.current = waveNum;
-        this.waveStats.timer = 60;
+        this.waveStats.timer = waveNum === 1 ? 10 : 60; // Shorter wait for first wave
         const count = 5 + (waveNum * 4);
         this.waveStats.totalMobs = count;
         this.waveStats.deadMobs = 0;
 
         for (let i = 0; i < count; i++) {
             const offset = i * 500; // Stagger spawns
-            const spawnSide = i % 2 === 0 ? POSITIONS.SPAWN_L : POSITIONS.SPAWN_R;
-
-            setTimeout(() => {
-                // Check if we didn't reset game in timeout
-                this.mobs.push({
-                    id: `w-${waveNum}-${i}-${Date.now()}`,
-                    x: spawnSide.x + (Math.random() - 0.5) * 100,
-                    y: spawnSide.y + (Math.random() - 0.5) * 100,
-                    type: Math.random() > 0.4 ? 'orc' : 'slime',
-                    hp: 50 + (waveNum * 20),
-                    maxHp: 50 + (waveNum * 20),
-                    speed: 2 + Math.random() * 0.5,
-                });
+            const timeout = setTimeout(() => {
+                this.spawnMob(waveNum, i);
+                // Remove from tracking
+                this.spawnTimeouts = this.spawnTimeouts.filter(t => t !== timeout);
             }, offset);
+            this.spawnTimeouts.push(timeout);
+        }
+    }
+
+    spawnMob(waveNum, i) {
+        const spawnSide = i % 2 === 0 ? POSITIONS.SPAWN_L : POSITIONS.SPAWN_R;
+        this.mobs.push({
+            id: `w-${waveNum}-${i}-${Date.now()}`,
+            x: spawnSide.x + (Math.random() - 0.5) * 100,
+            y: spawnSide.y + (Math.random() - 0.5) * 100,
+            type: Math.random() > 0.4 ? 'orc' : 'slime',
+            hp: 50 + (waveNum * 20),
+            maxHp: 50 + (waveNum * 20),
+            speed: 2 + Math.random() * 0.5,
+        });
+    }
+
+    spawnInstant() {
+        if (!this.isHost) return;
+        const remainingCount = this.spawnTimeouts.length;
+        if (remainingCount === 0) return;
+
+        // Clear all pending timeouts
+        this.spawnTimeouts.forEach(t => clearTimeout(t));
+        this.spawnTimeouts = [];
+
+        // Spawn all remaining for this wave immediately
+        const alreadySpawned = this.waveStats.totalMobs - remainingCount;
+        for (let i = alreadySpawned; i < this.waveStats.totalMobs; i++) {
+            this.spawnMob(this.waveStats.current, i);
         }
     }
 

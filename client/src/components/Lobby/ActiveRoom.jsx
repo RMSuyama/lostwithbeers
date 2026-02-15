@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
-import Chat from './Chat';
+import { useModal } from '../../context/ModalContext';
+import VoiceChat from '../VoiceChat';
 import ChampionPicker from './ChampionPicker';
 import LobbyHeader from './LobbyHeader';
 import PlayerList from './PlayerList';
@@ -9,12 +10,13 @@ import LoadingScreen from './LoadingScreen';
 import './Lobby.css';
 
 const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
+    const { showAlert } = useModal();
     const [players, setPlayers] = useState([]);
     const [me, setMe] = useState(null);
     const [room, setRoom] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
-    const isTransitioning = React.useRef(false);
-    const championIdRef = React.useRef('jaca'); // Default fallback
+    const isTransitioning = useRef(false);
+    const championIdRef = useRef('jaca'); // Default fallback
 
     useEffect(() => {
         fetchRoom();
@@ -156,12 +158,13 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
 
         // Prevent marking ready without selecting a champion
         if (!me.champion_id && !me.is_ready) {
-            alert('Escolha seu campeão antes de marcar como pronto!');
+            showAlert('Escolha seu campeão antes de marcar como pronto!');
             return;
         }
 
         console.log('Toggling ready state:', !me.is_ready);
-        await supabase.from('players').update({ is_ready: !me.is_ready }).eq('id', me.id);
+        const { error } = await supabase.from('players').update({ is_ready: !me.is_ready }).eq('id', me.id);
+        if (!error) fetchPlayers();
     };
 
     const selectChampion = async (champId) => {
@@ -185,8 +188,8 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
 
     const startGame = async () => {
         if (!me?.is_host) return;
-        if (players.length < 1) return alert('O herói precisa de um propósito!');
-        if (players.some(p => !p.is_ready)) return alert('Nem todos os guerreiros estão prontos!');
+        if (players.length < 1) return showAlert('O herói precisa de um propósito!');
+        if (players.some(p => !p.is_ready)) return showAlert('Nem todos os guerreiros estão prontos!');
 
         console.log('Starting battle...');
         setIsLoading(true);
@@ -194,7 +197,7 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
 
         if (error) {
             console.error('Error starting game:', error);
-            alert('Erro ao iniciar a batalha: ' + error.message);
+            showAlert('Erro ao iniciar a batalha: ' + error.message);
             setIsLoading(false);
         } else {
             console.log('Battle start signal sent successfully. Champion:', championIdRef.current);
@@ -232,29 +235,33 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
             />
 
             <div className="active-room-main-layout">
-                <main>
-                    <div className="panel-zelda no-shrink">
-                        <ChampionPicker onSelect={selectChampion} selectedId={me?.champion_id} />
-                    </div>
-
-                    <div className="flex-column-full">
-                        <PlayerList
-                            players={players}
-                            me={me}
-                            kickPlayer={kickPlayer}
-                        />
-                    </div>
-
+                <div className="room-column-players">
+                    <PlayerList
+                        players={players}
+                        me={me}
+                        kickPlayer={kickPlayer}
+                    />
                     <LobbyControls
                         me={me}
                         players={players}
                         toggleReady={toggleReady}
                         startGame={startGame}
                     />
-                </main>
+                </div>
 
-                <Chat roomId={roomId} playerName={playerName} />
+                <div className="room-column-center">
+                    <div className="panel-zelda no-shrink">
+                        <ChampionPicker onSelect={selectChampion} selectedId={me?.champion_id} />
+                    </div>
+                </div>
             </div>
+
+            <VoiceChat
+                roomId={roomId}
+                userId={user?.id}
+                playerName={playerName}
+                minimal={true}
+            />
         </div>
     );
 };

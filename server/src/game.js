@@ -400,8 +400,41 @@ class GameState {
             let nextX = p.x + inputX * speed * dt;
             let nextY = p.y + inputY * speed * dt;
 
-            if (!this.checkCollision(nextX, p.y)) p.x = nextX;
-            if (!this.checkCollision(p.x, nextY)) p.y = nextY;
+            // X Movement with Sub-stepping (Interpolation)
+            if (nextX !== p.x) {
+                const stepCount = Math.max(1, Math.ceil(Math.abs(nextX - p.x) / 5));
+                const dx = (nextX - p.x) / stepCount;
+                let hitX = false;
+                for (let s = 1; s <= stepCount; s++) {
+                    let testX = p.x + dx;
+                    if (this.checkCollision(testX, p.y)) {
+                        const gridX = Math.floor(testX / this.gridSize);
+                        if (dx > 0) p.x = gridX * this.gridSize - 1;
+                        else p.x = (gridX + 1) * this.gridSize;
+                        hitX = true;
+                        break;
+                    }
+                    p.x = testX;
+                }
+            }
+
+            // Y Movement with Sub-stepping (Interpolation)
+            if (nextY !== p.y) {
+                const stepCount = Math.max(1, Math.ceil(Math.abs(nextY - p.y) / 5));
+                const dy = (nextY - p.y) / stepCount;
+                let hitY = false;
+                for (let s = 1; s <= stepCount; s++) {
+                    let testY = p.y + dy;
+                    if (this.checkCollision(p.x, testY)) {
+                        const gridY = Math.floor(testY / this.gridSize);
+                        if (dy > 0) p.y = gridY * this.gridSize - 1;
+                        else p.y = (gridY + 1) * this.gridSize;
+                        hitY = false;
+                        break;
+                    }
+                    p.y = testY;
+                }
+            }
         }
     }
 

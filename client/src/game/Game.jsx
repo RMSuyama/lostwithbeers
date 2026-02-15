@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { MapRenderer } from './MapEngine';
 import { supabase } from '../supabaseClient';
 import MusicPlayer from '../components/Lobby/MusicPlayer';
+import { POSITIONS, TILE_SIZE, MAP_WIDTH, MAP_HEIGHT } from './constants';
+import { getChamp } from './Champions';
 
 // Systems
 import { NetworkSystem } from './systems/NetworkSystem';
@@ -146,8 +148,26 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             keys.current[key] = true;
 
             if (gameStateRef.current === 'playing' && !showEscMenu) {
-                if (key === 'q') basicAttack();
-                if (['1', '2', '3', '4'].includes(key)) useSkill();
+                const mode = settings.controlMode || 'both';
+                const isWASD = mode === 'wasd' || mode === 'both';
+                const isArrows = mode === 'arrows' || mode === 'both';
+
+                if ((isWASD && key === 'q') || (isArrows && key === 'a')) basicAttack();
+
+                // SKILLS (1234 for WASD, QWER for Arrows)
+                if (isWASD) {
+                    if (key === '1') useSkill(1);
+                    if (key === '2') useSkill(2);
+                    if (key === '3') useSkill(1);
+                    if (key === '4') useSkill(2);
+                }
+                if (isArrows) {
+                    if (key === 'q') useSkill(1);
+                    if (key === 'w') useSkill(2);
+                    if (key === 'e') useSkill(1);
+                    if (key === 'r') useSkill(2);
+                }
+
                 if (key === ' ') dash();
                 if (key === 'tab') {
                     e.preventDefault();
@@ -307,19 +327,22 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         }
     };
 
-    const useSkill = () => {
+    const useSkill = (index = 1) => {
         if (!combatRef.current || !mobSystemRef.current) return;
         const champ = getChamp(championId);
-        if (statsRef.current.mana < champ.skill.cost) {
+        const skillData = index === 2 ? (champ.skill2 || champ.skill) : champ.skill;
+        const skillKey = index === 2 ? 'lastSkillTime2' : 'lastSkillTime';
+
+        if (statsRef.current.mana < skillData.cost) {
             combatRef.current.spawnDamage(myPos.current.x, myPos.current.y, "NO MANA!", "#3b82f6");
             return;
         }
         const now = Date.now();
-        if (statsRef.current.lastSkillTime && now - statsRef.current.lastSkillTime < champ.skill.cd) return;
+        if (statsRef.current[skillKey] && now - statsRef.current[skillKey] < skillData.cd) return;
 
-        const result = castSkill(championId, { ...myPos.current, angle: facingAngle.current, level: statsRef.current.level }, mobSystemRef.current.mobs, combatRef.current.projectiles, engineRef.current?.mapData, combatRef.current.damageNumbers, { current: null });
-        statsRef.current.mana -= champ.skill.cost;
-        statsRef.current.lastSkillTime = now;
+        const result = castSkill(championId, { ...myPos.current, angle: facingAngle.current, level: statsRef.current.level }, mobSystemRef.current.mobs, combatRef.current.projectiles, engineRef.current?.mapData, combatRef.current.damageNumbers, { current: null }, index);
+        statsRef.current.mana -= skillData.cost;
+        statsRef.current[skillKey] = now;
         combatRef.current.addAttackEffect(myPos.current.x, myPos.current.y, facingAngle.current, 'skill');
 
         if (result.heal) {
@@ -332,17 +355,39 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
 
     const dash = () => {
         const ddist = 140;
-        const targetX = myPos.current.x + Math.cos(facingAngle.current) * ddist;
-        const targetY = myPos.current.y + Math.sin(facingAngle.current) * ddist;
-
         const map = engineRef.current?.mapData;
-        // Collision Rule: Dash can pass 0 and 1, but not 2 or 3
-        if (PhysicsSystem.canPass(targetX, targetY, 'dash', map)) {
-            myPos.current.x = targetX;
-            myPos.current.y = targetY;
-        } else {
-            combatRef.current?.spawnDamage(myPos.current.x, myPos.current.y, "BLOQUEADO!", "#ef4444");
+
+        let targetX = myPos.current.x;
+        let targetY = myPos.current.y;
+
+        const cos = Math.cos(facingAngle.current);
+        const sin = Math.sin(facingAngle.current);
+
+        // Sub-stepping to find furthest reachable point
+        const step = 5;
+        for (let d = step; d <= ddist; d += step) {
+            const nextX = myPos.current.x + cos * d;
+            const nextY = myPos.current.y + sin * d;
+
+            if (PhysicsSystem.canPass(nextX, nextY, 'dash', map)) {
+                targetX = nextX;
+                targetY = nextY;
+            } else {
+                // Approximate even closer pixel by pixel
+                for (let dd = 1; dd < step; dd++) {
+                    const preciseX = targetX + cos * dd;
+                    const preciseY = targetY + sin * dd;
+                    if (PhysicsSystem.canPass(preciseX, preciseY, 'dash', map)) {
+                        targetX = preciseX;
+                        targetY = preciseY;
+                    } else break;
+                }
+                break;
+            }
         }
+
+        myPos.current.x = targetX;
+        myPos.current.y = targetY;
     };
 
     const gainXp = (amount) => {
@@ -387,10 +432,10 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             ctx.clearRect(0, 0, size, size);
             ctx.fillStyle = 'rgba(0,0,0,0.5)';
             ctx.fillRect(0, 0, size, size);
-            const scale = size / 100; // MAP_WIDTH in tiles = 100
+            const scale = size / MAP_WIDTH; // MAP_WIDTH in tiles
 
-            for (let y = 0; y < 100; y++) {
-                for (let x = 0; x < 100; x++) {
+            for (let y = 0; y < MAP_HEIGHT; y++) {
+                for (let x = 0; x < MAP_WIDTH; x++) {
                     if (map.scales[y]?.[x] === 2) { // WALL
                         ctx.fillStyle = '#333';
                         ctx.fillRect(x * scale, y * scale, scale, scale);
@@ -468,6 +513,26 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                         <span>⚔️ ATK: {uiStats.atk}</span>
                         <span>💀 KILLS: {uiStats.kills}</span>
                     </div>
+
+                    {/* SKILLS HUD */}
+                    <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+                        {[1, 2].map(idx => {
+                            const champ = getChamp(championId);
+                            const skill = idx === 2 ? (champ.skill2 || { name: '-', cost: 0, cd: 0 }) : champ.skill;
+                            const isArrows = settings.controlMode === 'arrows';
+                            const keyName = isArrows ? (idx === 1 ? 'Q' : 'W') : (idx === 1 ? '1' : '2');
+                            const skillKey = idx === 2 ? 'lastSkillTime2' : 'lastSkillTime';
+                            const now = Date.now();
+                            const onCd = statsRef.current[skillKey] && now - statsRef.current[skillKey] < skill.cd;
+
+                            return (
+                                <div key={idx} style={{ flex: 1, background: 'rgba(0,0,0,0.4)', padding: '5px', border: onCd ? '1px solid #ef4444' : '1px solid #ffd700', borderRadius: '4px', opacity: onCd ? 0.6 : 1 }}>
+                                    <div style={{ fontSize: '0.8rem', color: onCd ? '#ef4444' : '#ffd700', whiteSpace: 'nowrap' }}>[{keyName}] {skill.name.toUpperCase()}</div>
+                                    <div style={{ fontSize: '0.6rem', color: '#aaa' }}>{skill.cost} MP</div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
 
@@ -495,13 +560,30 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                         </div>
                     )}
 
+                    {isHost.current && waveUi.dead < waveUi.total && (mobSystemRef.current?.spawnTimeouts?.length > 0) && (
+                        <button
+                            onClick={() => mobSystemRef.current?.spawnInstant()}
+                            style={{
+                                marginTop: '10px', background: '#b45309', border: '2px solid #fff',
+                                color: '#fff', padding: '8px 15px', borderRadius: '4px',
+                                cursor: 'pointer', fontFamily: 'VT323', fontSize: '1.2rem',
+                                display: 'flex', alignItems: 'center', gap: '8px', width: '100%', justifyContent: 'center'
+                            }}
+                        >
+                            <Zap size={18} fill="currentColor" /> APARECER TODOS
+                        </button>
+                    )}
+
                     <div style={{ marginTop: '10px', width: '100%', height: '10px', background: '#333', border: '1px solid #000', position: 'relative' }}>
                         <div style={{ width: `${(waveUi.baseHp / 1000) * 100}%`, height: '100%', background: '#22c55e' }} />
                         <span style={{ position: 'absolute', top: -20, left: 0, fontSize: '0.8rem', color: '#22c55e' }}>HP BASE: {waveUi.baseHp}</span>
                     </div>
                 </div>
-                <div style={{ marginTop: '10px', display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                    <button onClick={() => setShowSettings(true)} style={{ background: 'rgba(0,0,0,0.6)', border: '2px solid #ffd700', color: '#ffd700', padding: '10px', borderRadius: '4px', cursor: 'pointer', pointerEvents: 'auto' }}><Settings size={24} /></button>
+                <div style={{ marginTop: '10px', display: 'flex', gap: '10px', justifyContent: 'flex-end', pointerEvents: 'auto' }}>
+                    <div style={{ background: 'rgba(0,0,0,0.6)', border: '2px solid #ffd700', color: '#ffd700', padding: '5px 10px', borderRadius: '4px', fontSize: '0.9rem' }}>
+                        CONTROLES: {settings.controlMode === 'arrows' ? 'SETAS + QWER' : 'WASD + 1234'}
+                    </div>
+                    <button onClick={() => setShowSettings(true)} style={{ background: 'rgba(0,0,0,0.6)', border: '2px solid #ffd700', color: '#ffd700', padding: '10px', borderRadius: '4px', cursor: 'pointer' }}><Settings size={24} /></button>
                 </div>
             </div>
 
@@ -562,7 +644,15 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                                 <button onClick={() => {
                                     const ns = { ...settings, musicEnabled: !settings.musicEnabled };
                                     setSettings(ns); localStorage.setItem('gameSettings', JSON.stringify(ns));
-                                }} style={{ padding: '8px 16px', background: settings.musicEnabled ? '#16a34a' : '#ef4444', border: 'none', color: '#fff' }}>{settings.musicEnabled ? 'Ligada' : 'Desligada'}</button>
+                                }} style={{ padding: '8px 16px', background: settings.musicEnabled ? '#16a34a' : '#ef4444', border: 'none', color: '#fff', fontFamily: 'VT323', fontSize: '1.2rem', cursor: 'pointer' }}>{settings.musicEnabled ? 'Ligada' : 'Desligada'}</button>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
+                                <span>Esquema de Controle</span>
+                                <button onClick={() => {
+                                    const nextMode = settings.controlMode === 'wasd' ? 'arrows' : 'wasd';
+                                    const ns = { ...settings, controlMode: nextMode };
+                                    setSettings(ns); localStorage.setItem('gameSettings', JSON.stringify(ns));
+                                }} style={{ padding: '8px 16px', background: '#3b82f6', border: 'none', color: '#fff', fontFamily: 'VT323', fontSize: '1.2rem', cursor: 'pointer' }}>{settings.controlMode === 'wasd' ? 'WASD' : 'SETAS'}</button>
                             </div>
                         </div>
                         <button onClick={() => setShowSettings(false)} style={{ background: '#ffd700', color: '#000', padding: '10px 40px', fontSize: '1.2rem', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>FECHAR</button>

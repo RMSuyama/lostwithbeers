@@ -37,6 +37,7 @@ export class NetworkSystem {
         const now = Date.now();
         if (now - this.lastBroadcast < 50) return; // Cap at 20Hz
 
+        if (!this.channel) return;
         this.channel.send({
             type: 'broadcast',
             event: 'player_update',
@@ -46,6 +47,7 @@ export class NetworkSystem {
     }
 
     sendWaveSync(waveStats, baseHp) {
+        if (!this.channel) return;
         this.channel.send({
             type: 'broadcast',
             event: 'wave_sync',
@@ -65,6 +67,7 @@ export class NetworkSystem {
             type: m.type
         }));
 
+        if (!this.channel) return;
         this.channel.send({
             type: 'broadcast',
             event: 'mob_update',

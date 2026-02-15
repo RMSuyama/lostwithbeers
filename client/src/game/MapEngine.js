@@ -83,6 +83,16 @@ export const generateMap = (seed = 0) => {
     // Base Area
     drawCircle(50, 92, 12, TILE_TYPES.FORT_WOOD);
 
+    // --- RANDOMIZED ELEMENTS (Deterministic via Seed) ---
+    // Scatter some cobblestone patches
+    for (let i = 0; i < 20; i++) {
+        const rx = Math.floor(rnd() * MAP_WIDTH);
+        const ry = Math.floor(rnd() * MAP_HEIGHT);
+        if (grid[ry][rx] === TILE_TYPES.GRASS) {
+            drawCircle(rx, ry, 2 + rnd() * 3, TILE_TYPES.COBBLESTONE);
+        }
+    }
+
     // --- WALLS & AESTHETICS ---
     // Scan and build walls
     for (let y = 1; y < MAP_HEIGHT - 1; y++) {
@@ -195,20 +205,51 @@ export class MapRenderer {
 
             if (obj.type === 'prop') {
                 if (obj.tileType === TILE_TYPES.STONE_WALL) {
-                    // Retro Wall: Dark Green box with Gold Outline
+                    // Retro Wall: Dark Green box with Connected Gold Outlines
                     ctx.fillStyle = '#0f220f';
                     ctx.fillRect(rx, ry, TILE_SIZE, TILE_SIZE);
 
                     ctx.strokeStyle = '#ffd700'; // GOLD OUTLINE
                     ctx.lineWidth = 1;
-                    ctx.strokeRect(rx + 4, ry + 4, TILE_SIZE - 8, TILE_SIZE - 8);
 
-                    // "Digital" connection lines
+                    // Get grid position
+                    const tx = Math.floor(obj.x / TILE_SIZE);
+                    const ty = Math.floor(obj.y / TILE_SIZE);
+                    const grid = this.mapData.grid;
+
+                    // Check neighbors
+                    const hasN = grid[ty - 1]?.[tx] === TILE_TYPES.STONE_WALL;
+                    const hasS = grid[ty + 1]?.[tx] === TILE_TYPES.STONE_WALL;
+                    const hasW = grid[ty]?.[tx - 1] === TILE_TYPES.STONE_WALL;
+                    const hasE = grid[ty]?.[tx + 1] === TILE_TYPES.STONE_WALL;
+
+                    const pad = 4;
+                    const end = 28;
+
                     ctx.beginPath();
-                    ctx.moveTo(rx, ry); ctx.lineTo(rx + 4, ry + 4);
-                    ctx.moveTo(rx + 32, ry); ctx.lineTo(rx + 28, ry + 4);
-                    ctx.moveTo(rx, ry + 32); ctx.lineTo(rx + 4, ry + 28);
-                    ctx.moveTo(rx + 32, ry + 32); ctx.lineTo(rx + 28, ry + 28);
+                    // Main interior borders
+                    if (!hasN) { ctx.moveTo(rx + pad, ry + pad); ctx.lineTo(rx + end, ry + pad); }
+                    if (!hasS) { ctx.moveTo(rx + pad, ry + end); ctx.lineTo(rx + end, ry + end); }
+                    if (!hasW) { ctx.moveTo(rx + pad, ry + pad); ctx.lineTo(rx + pad, ry + end); }
+                    if (!hasE) { ctx.moveTo(rx + end, ry + pad); ctx.lineTo(rx + end, ry + end); }
+
+                    // Connection extensions (to close gaps between tiles)
+                    if (hasN) {
+                        ctx.moveTo(rx + pad, ry); ctx.lineTo(rx + pad, ry + pad);
+                        ctx.moveTo(rx + end, ry); ctx.lineTo(rx + end, ry + pad);
+                    }
+                    if (hasS) {
+                        ctx.moveTo(rx + pad, ry + end); ctx.lineTo(rx + pad, ry + 32);
+                        ctx.moveTo(rx + end, ry + end); ctx.lineTo(rx + end, ry + 32);
+                    }
+                    if (hasW) {
+                        ctx.moveTo(rx, ry + pad); ctx.lineTo(rx + pad, ry + pad);
+                        ctx.moveTo(rx, ry + end); ctx.lineTo(rx + pad, ry + end);
+                    }
+                    if (hasE) {
+                        ctx.moveTo(rx + end, ry + pad); ctx.lineTo(rx + 32, ry + pad);
+                        ctx.moveTo(rx + end, ry + end); ctx.lineTo(rx + 32, ry + end);
+                    }
                     ctx.stroke();
                 }
             } else if (obj.type === 'player') {

@@ -51,7 +51,8 @@ export class CombatSystem {
     }
 
     spawnDamage(x, y, value, color) {
-        this.damageNumbers.push({ x, y, value: Math.floor(value), color, anim: 0 });
+        const displayValue = typeof value === 'number' ? Math.floor(value) : value;
+        this.damageNumbers.push({ x, y, value: displayValue, color, anim: 0 });
     }
 
     addAttackEffect(x, y, angle, type) {

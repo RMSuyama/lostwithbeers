@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import { useNavigate } from 'react-router-dom';
+import { useModal } from '../../context/ModalContext';
 
 export const useLobby = (user, playerName) => {
     const navigate = useNavigate();
+    const { showAlert, showConfirm, showPrompt } = useModal();
     const [rooms, setRooms] = useState([]);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
@@ -78,7 +80,7 @@ export const useLobby = (user, playerName) => {
             .single();
 
         if (activePlayer) {
-            const force = window.confirm(`Herói, você já tem uma sessão ativa no reino "${activePlayer.rooms?.name || 'desconhecido'}". Deseja encerrar a sessão antiga e continuar aqui?`);
+            const force = await showConfirm(`Herói, você já tem uma sessão ativa no reino "${activePlayer.rooms?.name || 'desconhecido'}". Deseja encerrar a sessão antiga e continuar aqui?`);
             if (force) {
                 await supabase.from('players').delete().eq('user_id', user.id);
                 return false; // Liberado para seguir
@@ -89,11 +91,11 @@ export const useLobby = (user, playerName) => {
     };
 
     const createRoom = async () => {
-        if (!playerName?.trim()) return alert('Herói, identifique-se antes de iniciar sua jornada!');
+        if (!playerName?.trim()) return showAlert('Herói, identifique-se antes de iniciar sua jornada!');
         if (await checkAlreadyInRoom()) return;
 
-        const roomName = prompt('Nome da Sala (ex: "Reino dos Bravos"):');
-        if (!roomName?.trim()) return alert('Dê um nome à sua sala!');
+        const roomName = await showPrompt('Nome da Sala (ex: "Reino dos Bravos"):');
+        if (!roomName?.trim()) return; // Keep same logic (null or empty = cancel)
 
         setCreating(true);
         localStorage.setItem('playerName', playerName);
@@ -113,14 +115,14 @@ export const useLobby = (user, playerName) => {
                 await joinRoom(data[0].id, true);
             }
         } catch (err) {
-            alert('Falha na missão: ' + err.message);
+            showAlert('Falha na missão: ' + err.message);
         } finally {
             setCreating(false);
         }
     };
 
     const joinRoom = async (roomId, isHost = false) => {
-        if (!playerName?.trim()) return alert('Herói, identifique-se primeiro!');
+        if (!playerName?.trim()) return showAlert('Herói, identifique-se primeiro!');
         if (!isHost && await checkAlreadyInRoom()) return;
 
         localStorage.setItem('playerName', playerName);
@@ -131,7 +133,7 @@ export const useLobby = (user, playerName) => {
                 .select('*', { count: 'exact', head: true })
                 .eq('room_id', roomId);
 
-            if (count >= 10) return alert('Esta sala está cheia! (Máx: 10)');
+            if (count >= 5) return showAlert('Esta sala está cheia! (Máx: 5)');
 
             await supabase.from('players').delete().eq('user_id', user?.id);
 
@@ -148,7 +150,7 @@ export const useLobby = (user, playerName) => {
             if (error) throw error;
             navigate(`/room/${roomId}`);
         } catch (err) {
-            alert('Caminho bloqueado! ' + err.message);
+            showAlert('Caminho bloqueado! ' + err.message);
         }
     };
 

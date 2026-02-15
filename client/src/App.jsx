@@ -7,6 +7,8 @@ import Auth from './components/Auth/Auth';
 import AdminPanel from './components/Admin/AdminPanel';
 import Game from './game/Game';
 import './index.css';
+import { ModalProvider } from './context/ModalContext';
+import CustomModal from './components/Common/CustomModal';
 
 import loadingBg from './loading_bg.png';
 
@@ -16,6 +18,15 @@ const ProtectedRoute = ({ children, session }) => {
 };
 
 function App() {
+    return (
+        <ModalProvider>
+            <AppContent />
+            <CustomModal />
+        </ModalProvider>
+    );
+}
+
+function AppContent() {
     const [session, setSession] = useState(null);
     const [loading, setLoading] = useState(true);
 

@@ -29,7 +29,7 @@ export default class InputManager {
         const state = {
             vector: { x: 0, y: 0 },
             actions: {
-                skill_q: this.keys.skill_q.isDown,
+                skill_q: this.keys.skill_q.isDown || this.scene.input.activePointer.isDown,
                 skill_w: this.keys.skill_w.isDown,
                 skill_e: this.keys.skill_e.isDown,
                 skill_r: this.keys.skill_r.isDown,
