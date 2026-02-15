@@ -5,6 +5,7 @@ import LobbyHeader from './LobbyHeader';
 import UserProfileCard from './UserProfileCard';
 import RoomBrowser from './RoomBrowser';
 import { useLobby } from './useLobby';
+import './Lobby.css';
 
 const Lobby = ({ playerName, setPlayerName, user }) => {
     const {
