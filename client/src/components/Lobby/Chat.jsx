@@ -78,10 +78,10 @@ const Chat = ({ roomId, playerName }) => {
                 {messages.map((msg) => (
                     <div key={msg.id} className="message">
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            <span style={{ color: '#888', fontSize: '1rem' }}>{formatTime(msg.created_at)}</span>
+                            <span style={{ color: '#888', fontSize: '0.8rem' }}>{formatTime(msg.created_at)}</span>
                             <span className="message-sender">{msg.sender_name}:</span>
                         </div>
-                        <span style={{ fontSize: '1.2rem', paddingLeft: '2rem' }}>{msg.content}</span>
+                        <span style={{ fontSize: '1rem', paddingLeft: '0.5rem', display: 'block' }}>{msg.content}</span>
                     </div>
                 ))}
                 <div ref={chatEndRef} />

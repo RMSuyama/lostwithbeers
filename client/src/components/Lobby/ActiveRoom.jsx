@@ -2,15 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import Chat from './Chat';
 import ChampionPicker from './ChampionPicker';
-import { Sword, LogOut, CheckCircle } from 'lucide-react';
+import LobbyHeader from './LobbyHeader';
+import PlayerList from './PlayerList';
+import LobbyControls from './LobbyControls';
+import LoadingScreen from './LoadingScreen';
 import './Lobby.css';
 
 const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
     const [players, setPlayers] = useState([]);
     const [me, setMe] = useState(null);
     const [room, setRoom] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
     const isTransitioning = React.useRef(false);
-    const championIdRef = React.useRef('jaca');
+    const championIdRef = React.useRef('jaca'); // Default fallback
 
     useEffect(() => {
         fetchRoom();
@@ -44,7 +48,10 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
                 if (payload.new.status === 'playing') {
                     console.log('Room status changed to playing. Initiating transition with champion:', championIdRef.current);
                     isTransitioning.current = true;
-                    setInGame(true, championIdRef.current);
+                    setIsLoading(true);
+                    setTimeout(() => {
+                        setInGame(true, championIdRef.current);
+                    }, 500); // Small delay for visual effect
                 } else {
                     console.log('Room status changed but not to playing:', payload.new.status);
                 }
@@ -162,104 +169,73 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
         await supabase.from('players').delete().eq('id', playerId);
     };
 
-    // Team randomization removed - Co-op only
-
     const startGame = async () => {
         if (!me?.is_host) return;
         if (players.length < 1) return alert('O herói precisa de um propósito!');
         if (players.some(p => !p.is_ready)) return alert('Nem todos os guerreiros estão prontos!');
 
         console.log('Starting battle...');
+        setIsLoading(true);
         const { error } = await supabase.from('rooms').update({ status: 'playing' }).eq('id', roomId);
 
         if (error) {
             console.error('Error starting game:', error);
             alert('Erro ao iniciar a batalha: ' + error.message);
+            setIsLoading(false);
         } else {
             console.log('Battle start signal sent successfully. Champion:', championIdRef.current);
             isTransitioning.current = true;
-            setInGame(true, championIdRef.current);
+            setTimeout(() => {
+                setInGame(true, championIdRef.current);
+            }, 500);
         }
     };
 
-    const team1 = players.filter(p => p.team_id === 1);
-    const team2 = players.filter(p => p.team_id === 2);
+    const forceStart = () => {
+        console.log('FORCE START');
+        isTransitioning.current = true;
+        setIsLoading(true);
+        setTimeout(() => {
+            setInGame(true, championIdRef.current);
+        }, 500);
+    };
+
+    if (isLoading) {
+        return <LoadingScreen text="PREPARANDO O REINO..." />;
+    }
 
     return (
         <div className="active-room-container">
-            <header className="active-room-header">
-                <div>
-                    <h1 className="lobby-title" style={{ fontSize: '1.8rem', color: '#ffd700' }}>
-                        LWB - Lost with Beers
-                    </h1>
-                    <p style={{ color: '#deb887', fontSize: '1.1rem', marginTop: '-5px' }}>REINO ID: {roomId.substring(0, 8).toUpperCase()}</p>
-                    {/* Debug Info for Host */}
-                    {me?.is_host && (
-                        <div style={{ fontSize: '1rem', color: '#ff4444', border: '1px solid #ff4444', padding: '4px', marginTop: '8px' }}>
-                            [DEBUG] HOST: SIM | STATUS: {room?.status} | JOGADORES: {players.length} | PRONTOS: {players.filter(p => p.is_ready).length}
-                            <button onClick={() => { console.log('FORCE START'); isTransitioning.current = true; setInGame(true, championIdRef.current); }} style={{ marginLeft: '10px', background: 'red', color: 'white' }}>
-                                FORÇAR INÍCIO
-                            </button>
-                        </div>
-                    )}
-                </div>
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
-                    {/* Team Randomization Button Removed */}
-                    <button onClick={leaveRoom} className="btn-primary" style={{ background: '#451010', padding: '0.4rem 0.8rem' }}>
-                        <LogOut size={20} style={{ marginRight: '8px' }} /> ABANDONAR
-                    </button>
-                </div>
-            </header>
+            <LobbyHeader
+                roomId={roomId}
+                isHost={me?.is_host}
+                roomStatus={room?.status}
+                playerCount={players.length}
+                readyCount={players.filter(p => p.is_ready).length}
+                onLeave={leaveRoom}
+                onForceStart={forceStart}
+            />
 
-            <div className="active-room-main-layout" style={{ display: 'flex', flex: 1, width: '100%', maxWidth: '80rem', gap: '1.5rem', overflow: 'hidden' }}>
-                <main style={{ flex: 1, overflowY: 'auto' }}>
-                    <div className="panel-zelda" style={{ marginBottom: '2rem' }}>
+            <div className="active-room-main-layout">
+                <main>
+                    <div className="panel-zelda" style={{ flexShrink: 0 }}>
                         <ChampionPicker onSelect={selectChampion} selectedId={me?.champion_id} />
                     </div>
 
-                    <div className="main-content-layout" style={{ maxWidth: 'none', justifyContent: 'center' }}>
-                        <div className="team-column" style={{ width: '100%', maxWidth: '800px' }}>
-                            <h3 className="team-header team-1-header" style={{ background: '#333', borderColor: '#ffd700' }}>HERÓIS DO REINO ({players.length}/10)</h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                {players.map(p => (
-                                    <PlayerSlot key={p.id} player={p} isMe={p.id === me?.id} isHost={me?.is_host} onKick={() => kickPlayer(p.id)} />
-                                ))}
-                                {Array.from({ length: Math.max(0, 10 - players.length) }).map((_, i) => (
-                                    <div key={`empty-${i}`} className="player-slot" style={{ opacity: 0.2, borderStyle: 'dashed' }}>
-                                        VAGA ABERTA
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                        <PlayerList
+                            players={players}
+                            me={me}
+                            kickPlayer={kickPlayer}
+                        />
                     </div>
 
-                    <div className="active-room-controls" style={{ marginTop: '2rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '1.5rem' }}>
-                        <button
-                            onClick={toggleReady}
-                            disabled={!me?.champion_id}
-                            className={`btn-primary ${me?.is_ready ? 'ready' : ''}`}
-                            style={{
-                                padding: '0.8rem 2.5rem',
-                                fontSize: '1.5rem',
-                                opacity: me?.champion_id ? 1 : 0.5,
-                                cursor: me?.champion_id ? 'pointer' : 'not-allowed'
-                            }}
-                            title={!me?.champion_id ? 'Escolha um campeão primeiro!' : ''}
-                        >
-                            {me?.is_ready ? 'ESTOU PRONTO!' : 'MARCAR PRONTO'}
-                        </button>
-
-                        {me?.is_host && (
-                            <button
-                                onClick={startGame}
-                                disabled={players.some(p => !p.is_ready)}
-                                className="btn-primary"
-                                style={{ padding: '0.8rem 2.5rem', fontSize: '1.5rem' }}
-                            >
-                                INICIAR BATALHA
-                            </button>
-                        )}
-                    </div>
+                    <LobbyControls
+                        me={me}
+                        players={players}
+                        toggleReady={toggleReady}
+                        startGame={startGame}
+                    />
                 </main>
 
                 <Chat roomId={roomId} playerName={playerName} />
@@ -267,34 +243,5 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
         </div>
     );
 };
-
-const PlayerSlot = ({ player, isMe, isHost, onKick }) => (
-    <div className={`player-slot ${player.is_ready ? 'ready' : ''}`}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div className="champ-avatar" style={{ width: '40px', height: '40px', fontSize: '1.5rem', margin: 0 }}>
-                {player.name.charAt(0).toUpperCase()}
-            </div>
-            <div>
-                <div style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem' }}>
-                    {player.name} {isMe && <span style={{ fontSize: '1rem', color: '#ffd700' }}>[VOCÊ]</span>}
-                    {player.is_host && <Sword size={18} style={{ color: '#ffd700' }} />}
-                    {isHost && !isMe && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onKick(); }}
-                            title="Expulsar"
-                            style={{ background: 'none', border: 'none', color: '#ff4444', cursor: 'pointer', padding: '4px' }}
-                        >
-                            <LogOut size={16} />
-                        </button>
-                    )}
-                </div>
-                <div style={{ fontSize: '1.1rem', color: '#8a8a8a' }}>
-                    {player.champion_id || 'Escolhendo herói...'}
-                </div>
-            </div>
-        </div>
-        {player.is_ready && <CheckCircle size={28} style={{ color: '#fff' }} />}
-    </div>
-);
 
 export default ActiveRoom;

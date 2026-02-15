@@ -18,27 +18,25 @@ const CHAMPIONS = [
 
 const ChampionPicker = ({ onSelect, selectedId }) => {
     return (
-        <div>
-            <h3 className="card-header">
-                01. ESCOLHA SEU CAMPEÃO DO PORTO
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <h3 className="card-header" style={{ margin: 0, fontSize: '1rem' }}>
+                01. ESCOLHA SEU CAMPEÃO
             </h3>
-            <div className="champion-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))' }}>
+            <div className="champion-grid">
                 {CHAMPIONS.map((champ) => (
                     <div
                         key={champ.id}
                         onClick={() => onSelect(champ.id)}
                         className={`champ-card ${selectedId === champ.id ? 'selected' : ''}`}
+                        title={champ.description}
                     >
                         <div className="champ-avatar" style={{
                             background: champ.color,
-                            border: '3px solid #000',
-                            boxShadow: selectedId === champ.id ? `0 0 10px ${champ.color}` : 'none',
-                            fontSize: '1.8rem'
+                            boxShadow: selectedId === champ.id ? `0 0 10px ${champ.color}` : 'none'
                         }}>
                             {champ.theme}
                         </div>
-                        <h4 style={{ fontSize: '1.1rem', color: '#ffd700', textTransform: 'uppercase' }}>{champ.name}</h4>
-                        <p style={{ fontSize: '0.8rem', color: '#ccc', marginTop: '2px', lineHeight: '1.1' }}>{champ.description}</p>
+                        <h3>{champ.name}</h3>
                     </div>
                 ))}
             </div>
