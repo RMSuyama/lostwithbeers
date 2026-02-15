@@ -1,39 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MapRenderer, TILE_SIZE, MAP_WIDTH, MAP_HEIGHT } from './MapEngine';
+import { MapRenderer } from './MapEngine';
 import { supabase } from '../supabaseClient';
 import MusicPlayer from '../components/Lobby/MusicPlayer';
 import MobileControls from '../components/MobileControls';
 import VoiceChat from '../components/VoiceChat';
 
+// Modules
+import { TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, BASE_POS, SPAWN_POS_L, SPAWN_POS_R, HUB_POS } from './constants';
+import { CHAMPIONS, getChamp } from './Champions';
+import { castSkill } from './Skills';
+import { updateMobs } from './Mobs';
+
 // Assets
 import jacaSprite from '../Jaca, o pirata crocodilo em 8 direções.png';
 import jacaAttack from '../Ataques do crocodilo com espada.png';
-
-// Champion Configuration - Porto Cast Roster
-const CHAMPIONS = {
-    jaca: { name: 'Jaca', color: '#15803d', hp: 100, mana: 40, basic: { range: 80, arc: 1.6, dmg: 1 }, skill: { name: 'Death Roll', cost: 15, cd: 4000 } },
-    djox: { name: 'Djox', color: '#334155', hp: 140, mana: 50, basic: { range: 110, arc: 2.2, dmg: 1, kb: 30 }, skill: { name: 'Anchor Smash', cost: 20, cd: 6000 } },
-    brunao: { name: 'Brunão', color: '#db2777', hp: 180, mana: 60, basic: { range: 70, arc: 1.4, dmg: 1, kb: 50 }, skill: { name: 'Guardian Aura', cost: 25, cd: 9000 } },
-    jubarbie: { name: 'Jubarbie', color: '#1e3a8a', hp: 220, mana: 50, basic: { range: 130, arc: 2.6, dmg: 1 }, skill: { name: 'Heavy Splash', cost: 30, cd: 8000 } },
-    shiryu: { name: 'Shiryu Suyama', color: '#064e3b', hp: 90, mana: 130, basic: { range: 250, arc: 0.6, dmg: 1, ranged: true }, skill: { name: 'Sopro Ancestral', cost: 35, cd: 6000 } },
-    charles: { name: 'J. Charles', color: '#475569', hp: 80, mana: 70, basic: { range: 350, arc: 0.3, dmg: 1, ranged: true }, skill: { name: 'Bateria de Guerra', cost: 25, cd: 7000 } },
-    gusto: { name: 'Gusto', color: '#78350f', hp: 150, mana: 60, basic: { range: 90, arc: 1.8, dmg: 1 }, skill: { name: 'Frasco Ácido', cost: 20, cd: 6000 } },
-    kleyiton: { name: 'Kleyiton', color: '#b45309', hp: 110, mana: 90, basic: { range: 160, arc: 1.2, dmg: 1 }, skill: { name: 'Campo Geométrico', cost: 30, cd: 10000 } },
-    milan: { name: 'Milan', color: '#4a044e', hp: 70, mana: 160, basic: { range: 190, arc: 2.0, dmg: 1 }, skill: { name: 'Blefe Espectral', cost: 25, cd: 5000 } },
-    enzo: { name: 'Enzo', color: '#0369a1', hp: 90, mana: 50, basic: { range: 100, arc: 2.2, dmg: 1 }, skill: { name: 'Riff Elétrico', cost: 12, cd: 3000 } },
-    mayron: { name: 'Mayron', color: '#0d9488', hp: 110, mana: 100, basic: { range: 170, arc: 2.4, dmg: 1 }, skill: { name: 'Tide Wave', cost: 25, cd: 6000 } },
-    klebao: { name: 'Klebão', color: '#ffffff', hp: 200, mana: 100, basic: { range: 300, arc: 0.2, dmg: 1, ranged: true }, skill: { name: 'Julgamento Supremo', cost: 50, cd: 12000 } }
-};
-
-// Aliases for retro-compatibility
-CHAMPIONS.shiryusuyama = CHAMPIONS.shiryu;
-CHAMPIONS.rafarofa = CHAMPIONS.charles; // Charles replaced Rafarofa in some versions
-const getChamp = (id) => CHAMPIONS[id] || CHAMPIONS.jaca;
-
-const BASE_POS = { x: 50 * TILE_SIZE, y: 92 * TILE_SIZE }; // Adjusted for new Base
-const SPAWN_POS_L = { x: 15 * TILE_SIZE, y: 10 * TILE_SIZE }; // Adjusted for Left Serpent
-const SPAWN_POS_R = { x: 85 * TILE_SIZE, y: 10 * TILE_SIZE }; // Adjusted for Right Serpent
-const HUB_POS = { x: 50 * TILE_SIZE, y: 60 * TILE_SIZE };
+import { Sword, Shield } from 'lucide-react';
 
 const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const canvasRef = useRef(null);
@@ -289,75 +270,24 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             });
 
             // Monster AI & Combat
-            monstersRef.current = monstersRef.current.filter(m => {
-                if (m.hp <= 0) {
-                    waveStats.current.deadMobs++;
-                    statsRef.current.kills++;
-                    gainXp(2);
-                    return false;
-                }
+            const { activeMonsters, deadCount, xpGain, kills } = updateMobs(
+                monstersRef.current,
+                myPos.current,
+                engineRef.current,
+                dt,
+                gameStateRef.current,
+                setGameState,
+                spawnDamage,
+                statsRef.current,
+                baseHpRef
+            );
 
-                const distPlayer = Math.hypot(myPos.current.x - m.x, myPos.current.y - m.y);
-                const dxBase = BASE_POS.x - m.x;
-                const dyBase = BASE_POS.y - m.y;
-                const distBase = Math.hypot(dxBase, dyBase);
-
-                // Movement Helper (Sliding)
-                const moveToward = (targetX, targetY) => {
-                    const angle = Math.atan2(targetY - m.y, targetX - m.x);
-                    const vx = Math.cos(angle) * m.speed;
-                    const vy = Math.sin(angle) * m.speed;
-
-                    if (engineRef.current) {
-                        // Try X Movement
-                        const nextX = m.x + vx;
-                        const gX_x = Math.floor(nextX / TILE_SIZE);
-                        const gY_x = Math.floor(m.y / TILE_SIZE);
-                        if (!engineRef.current.mapData.collisions[gY_x]?.[gX_x]) {
-                            m.x = nextX;
-                        }
-
-                        // Try Y Movement
-                        const nextY = m.y + vy;
-                        const gX_y = Math.floor(m.x / TILE_SIZE);
-                        const gY_y = Math.floor(nextY / TILE_SIZE);
-                        if (!engineRef.current.mapData.collisions[gY_y]?.[gX_y]) {
-                            m.y = nextY;
-                        }
-                    } else {
-                        m.x += vx; m.y += vy;
-                    }
-                };
-
-                // Aggro / Chasing
-                if (distPlayer < 400 && gameStateRef.current === 'playing') {
-                    moveToward(myPos.current.x, myPos.current.y);
-
-                    // Attack Player
-                    if (distPlayer < 40) {
-                        if (!m.lastAttack || now - m.lastAttack > 1200) {
-                            statsRef.current.hp = Math.max(0, statsRef.current.hp - 10);
-                            m.lastAttack = now;
-                            spawnDamage(myPos.current.x, myPos.current.y, 10);
-                            if (statsRef.current.hp <= 0) setGameState('dead');
-                        }
-                    }
-                } else {
-                    // Move toward Base
-                    if (distBase > 60) {
-                        moveToward(BASE_POS.x, BASE_POS.y);
-                    } else {
-                        // Attack Base
-                        if (!m.lastAttack || now - m.lastAttack > 1500) {
-                            baseHpRef.current -= 15;
-                            m.lastAttack = now;
-                            spawnDamage(BASE_POS.x, BASE_POS.y, 15);
-                            if (baseHpRef.current <= 0) setGameState('over');
-                        }
-                    }
-                }
-                return true;
-            });
+            monstersRef.current = activeMonsters;
+            if (deadCount > 0) {
+                waveStats.current.deadMobs += deadCount;
+                statsRef.current.kills += kills;
+                gainXp(xpGain);
+            }
 
             // Entity Pushing Physics (Player <-> Monsters)
             monstersRef.current.forEach(m => {
@@ -598,136 +528,32 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         const champ = getChamp(championIdRef.current);
         if (statsRef.current.mana < champ.skill.cost) return;
         statsRef.current.mana -= champ.skill.cost;
-        const levelBonus = 1 + (statsRef.current.level * 0.25);
 
-        attackEffect.current = { x: myPos.current.x, y: myPos.current.y, angle: facingAngle.current, time: Date.now(), type: 'mystic' };
+        const player = {
+            level: statsRef.current.level,
+            x: myPos.current.x,
+            y: myPos.current.y,
+            angle: facingAngle.current
+        };
 
-        switch (championId) {
-            case 'jaca':
-                monstersRef.current.forEach(m => {
-                    const d = Math.hypot(m.x - myPos.current.x, m.y - myPos.current.y);
-                    if (d < 120) {
-                        const sdmg = 65 * levelBonus;
-                        m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg);
-                        m.blink = 8;
-                        m.x += (Math.random() - 0.5) * 60;
-                    }
-                });
-                break;
-            case 'djox':
-                monstersRef.current.forEach(m => {
-                    const dx = m.x - myPos.current.x, dy = m.y - myPos.current.y, d = Math.hypot(dx, dy);
-                    if (d < 180) {
-                        const sdmg = 90 * levelBonus;
-                        m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg);
-                        m.blink = 8;
-                        m.x += (dx / d) * 120; m.y += (dy / d) * 120;
-                    }
-                });
-                break;
-            case 'brunao':
-                statsRef.current.hp = Math.min(statsRef.current.maxHp, statsRef.current.hp + 60);
-                monstersRef.current.forEach(m => {
-                    if (Math.hypot(m.x - myPos.current.x, m.y - myPos.current.y) < 220) {
-                        const sdmg = 40 * levelBonus;
-                        m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg);
-                    }
-                });
-                break;
-            case 'jubarbie':
-                monstersRef.current.forEach(m => {
-                    if (Math.hypot(m.x - myPos.current.x, m.y - myPos.current.y) < 300) {
-                        const sdmg = 120 * levelBonus;
-                        m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg);
-                    }
-                });
-                break;
-            case 'shiryu':
-                // Mystic blast / AoE
-                monstersRef.current.forEach(m => {
-                    if (Math.hypot(m.x - myPos.current.x, m.y - myPos.current.y) < 250) {
-                        const sdmg = 70 * levelBonus;
-                        m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg, '#064e3b');
-                        m.blink = 7;
-                    }
-                });
-                break;
-            case 'charles':
-                // Bateria de Guerra (Shockwave)
-                monstersRef.current.forEach(m => {
-                    if (Math.hypot(m.x - myPos.current.x, m.y - myPos.current.y) < 350) {
-                        const sdmg = 45 * levelBonus;
-                        m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg, '#475569');
-                        m.blink = 5;
-                        const ang = Math.atan2(m.y - myPos.current.y, m.x - myPos.current.x);
-                        m.x += Math.cos(ang) * 100; m.y += Math.sin(ang) * 100;
-                    }
-                });
-                break;
-            case 'gusto':
-                // Alchemist Blast (Big projectile)
-                projectilesRef.current.push({ x: myPos.current.x, y: myPos.current.y, angle: facingAngle.current, speed: 12, life: 2, dmg: 160 * levelBonus, big: true, color: '#10b981' });
-                break;
-            case 'kleyiton':
-                // Geometric Barrier (AoE DMG + minor push)
-                monstersRef.current.forEach(m => {
-                    const d = Math.hypot(m.x - myPos.current.x, m.y - myPos.current.y);
-                    if (d < 300) {
-                        const sdmg = 55 * levelBonus;
-                        m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg, '#c084fc');
-                        m.blink = 6;
-                        const ang = Math.atan2(m.y - myPos.current.y, m.x - myPos.current.x);
-                        m.x += Math.cos(ang) * 50; m.y += Math.sin(ang) * 50;
-                    }
-                });
-                break;
-            case 'klebao':
-                // JULGAMENTO SUPREMO (Massive Area Stun/DMG)
-                monstersRef.current.forEach(m => {
-                    const d = Math.hypot(m.x - myPos.current.x, m.y - myPos.current.y);
-                    if (d < 400) {
-                        const sdmg = 200 * levelBonus;
-                        m.hp -= sdmg; statsRef.current.totalDamage += sdmg;
-                        m.blink = 15;
-                        spawnDamage(m.x, m.y, "TAPA SECO!", "#ffffff");
-                        spawnDamage(m.x, m.y - 20, sdmg, "#ef4444");
-                        m.speed = 0; // Stun
-                        setTimeout(() => m.speed = 2, 2000);
-                    }
-                });
-                break;
-            case 'milan':
-                // Card blast
-                monstersRef.current.forEach(m => {
-                    if (Math.hypot(m.x - myPos.current.x, m.y - myPos.current.y) < 240) {
-                        const sdmg = 85 * levelBonus;
-                        m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg, '#c026d3');
-                    }
-                });
-                break;
-            case 'enzo':
-                // Dash / Blink
-                const ex = myPos.current.x + Math.cos(facingAngle.current) * 300, ey = myPos.current.y + Math.sin(facingAngle.current) * 300;
-                const egx = Math.floor(ex / TILE_SIZE), egy = Math.floor(ey / TILE_SIZE);
-                const escale = engineRef.current?.mapData.scales[egy]?.[egx] || 3;
-                if (escale < 3) { // Skill can pass Scale 0, 1, 2. Only Scale 3 (water) blocks.
-                    myPos.current.x = Math.max(0, Math.min(MAP_WIDTH * TILE_SIZE, ex));
-                    myPos.current.y = Math.max(0, Math.min(MAP_HEIGHT * TILE_SIZE, ey));
-                }
-                break;
-            case 'mayron':
-                monstersRef.current.forEach(m => {
-                    const dx = m.x - myPos.current.x, dy = m.y - myPos.current.y, d = Math.hypot(dx, dy);
-                    if (d < 280) {
-                        const sdmg = 65 * levelBonus;
-                        m.hp -= sdmg; statsRef.current.totalDamage += sdmg; spawnDamage(m.x, m.y, sdmg, '#0d9488');
-                        m.blink = 8;
-                        m.x -= (dx / d) * 180; m.y -= (dy / d) * 180;
-                    }
-                });
-                break;
+        const result = castSkill(
+            championIdRef.current,
+            player,
+            monstersRef.current,
+            projectilesRef.current,
+            engineRef.current?.mapData,
+            damageRef.current,
+            attackEffect
+        );
+
+        if (result.totalDamage) statsRef.current.totalDamage += result.totalDamage;
+        if (result.heal) {
+            statsRef.current.hp = Math.min(statsRef.current.maxHp, statsRef.current.hp + result.heal);
         }
-        setTimeout(() => attackEffect.current = null, 300);
+        if (result.teleport) {
+            myPos.current.x = result.teleport.x;
+            myPos.current.y = result.teleport.y;
+        }
     };
 
     const dash = () => {
