@@ -273,3 +273,151 @@
         width: 100%;
     }
 }
+
+/* RESTORED SECTIONS */
+
+.player-slot {
+    background: #1a0f05;
+    border: 2px solid #000;
+    padding: 0.3rem 0.5rem;
+    margin-bottom: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+    height: 48px;
+}
+
+.player-slot.ready {
+    border-color: #ffd700;
+}
+
+/* Champion Picker */
+.champion-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.4rem;
+    width: 100%;
+}
+
+.champ-card {
+    background: #2e1a0a;
+    border: 2px solid #000;
+    padding: 0.4rem;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.1s;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+}
+
+.champ-card.selected {
+    background: #4e3629;
+    border-color: #ffd700;
+    transform: translateY(-2px);
+}
+
+.champ-card h3 {
+    font-size: 0.9rem;
+    margin: 2px 0 0 0;
+    color: #ffd700;
+    text-transform: uppercase;
+}
+
+.champ-avatar {
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    background: #000;
+    border: 2px solid #8b5a2b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: #ffd700;
+    flex-shrink: 0;
+}
+
+/* Chat */
+.chat-container {
+    width: 280px;
+    background: #1a0f05;
+    border: 3px solid #2e1a0a;
+    display: flex;
+    flex-direction: column;
+    font-size: 1rem;
+    height: 100%;
+}
+
+.chat-header {
+    background: #2e1a0a;
+    color: #ffd700;
+    padding: 0.3rem;
+    border-bottom: 2px solid #ffd700;
+    text-align: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.chat-messages {
+    flex: 1;
+    padding: 0.5rem;
+    overflow-y: auto;
+    background: #1a110a;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.message {
+    border-left: 2px solid #8b5a2b;
+    padding-left: 0.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    font-size: 0.9rem;
+}
+
+.message-sender {
+    color: #ffd700;
+    font-size: 0.9rem;
+    margin-bottom: 1px;
+}
+
+.chat-input-area {
+    padding: 0.4rem;
+    background: #2e1a0a;
+    flex-shrink: 0;
+}
+
+.chat-input-area input {
+    background: #000;
+    border: 2px solid #8b5a2b;
+    color: #ffd700;
+    padding: 0.3rem;
+    font-size: 1rem;
+    width: 100%;
+}
+
+.active-room-controls {
+    margin-top: 0.5rem;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    padding-bottom: 0.5rem;
+    flex-shrink: 0;
+}
+
+@media (max-width: 1024px) {
+    .champion-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .chat-container {
+        width: 100%;
+        height: 200px;
+        flex-shrink: 0;
+    }
+}
