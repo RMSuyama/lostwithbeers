@@ -41,9 +41,27 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const engineRef = useRef(null);
     const [players, setPlayers] = useState([]);
     const [isMounted, setIsMounted] = useState(false);
-    const [gameState, setGameState] = useState('playing'); // playing, dead, over, victory
+    const [gameState, setGameState] = useState('starting'); // starting, playing, dead, over, victory
+    const [startTimer, setStartTimer] = useState(5);
     const gameStateRef = useRef(gameState);
     useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
+
+    // Countdown Logic
+    useEffect(() => {
+        if (gameState === 'starting') {
+            const timer = setInterval(() => {
+                setStartTimer(prev => {
+                    if (prev <= 1) {
+                        clearInterval(timer);
+                        setGameState('playing');
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+            return () => clearInterval(timer);
+        }
+    }, [gameState]);
 
     const playersRef = useRef([]); // Critical for draw loop closure
 
@@ -219,7 +237,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             }
             lastPosRef.current = { ...myPos.current };
 
-            if (gameStateRef.current === 'over') return;
+            if (gameStateRef.current === 'over' || gameStateRef.current === 'starting') return;
 
             // Camera follow
             const lerp = 0.12;
@@ -799,6 +817,22 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
 
     return (
         <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#000', fontFamily: 'VT323' }}>
+            {/* Wallpaper Overlay for 5s Pre-Match */}
+            {gameState === 'starting' && (
+                <div style={{
+                    position: 'absolute', inset: 0,
+                    backgroundImage: `url(/src/loading_bg.png)`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    zIndex: 9999,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    color: '#ffd700', fontFamily: 'VT323, monospace',
+                    textShadow: '0 0 10px #000'
+                }}>
+                    <div style={{ fontSize: '4rem', marginBottom: '20px' }}>PREPARANDO BATALHA...</div>
+                    <div style={{ fontSize: '8rem', fontWeight: 'bold' }}>{startTimer}</div>
+                </div>
+            )}
             <canvas ref={canvasRef} onMouseDown={() => !showEscMenu && basicAttack()} style={{ background: '#1e3a1a', display: 'block', width: '100vw', height: '100vh', cursor: showEscMenu ? 'default' : 'crosshair' }} />
 
             {showEscMenu && (
