@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sword, Zap, Shield, ArrowUp, ZapIcon } from 'lucide-react';
+import { Sword, Zap, Shield, ArrowUp } from 'lucide-react';
 
 const MobileControls = ({ onInput, onAction }) => {
-    const [isJoystickActive, setIsJoystickActive] = useState(false);
     const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
     const joystickBaseRef = useRef(null);
-    const joystickStickRef = useRef(null);
-    const lastAngle = useRef(null);
+    const activeTouchId = useRef(null);
 
     // Prevent default touch behaviors
     useEffect(() => {
@@ -22,13 +20,20 @@ const MobileControls = ({ onInput, onAction }) => {
     }, []);
 
     const handleJoystickStart = (e) => {
-        setIsJoystickActive(true);
+        e.preventDefault();
+        const touch = e.touches[0];
+        activeTouchId.current = touch.identifier;
         handleJoystickMove(e);
     };
 
     const handleJoystickMove = (e) => {
-        if (!joystickBaseRef.current) return;
-        const touch = e.touches[0];
+        e.preventDefault();
+        if (!joystickBaseRef.current || activeTouchId.current === null) return;
+
+        // Find the touch that matches our active ID
+        const touch = Array.from(e.touches).find(t => t.identifier === activeTouchId.current);
+        if (!touch) return;
+
         const rect = joystickBaseRef.current.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
@@ -46,42 +51,42 @@ const MobileControls = ({ onInput, onAction }) => {
 
         setJoystickPos({ x: sx, y: sy });
 
-        // Map to keys for compatibility
-        const threshold = 0.3;
-        const activeKeys = new Set();
+        // Send normalized vector to game (compatible with ControlsSystem)
+        const threshold = 0.2;
         if (limitedDist > maxDist * threshold) {
-            if (Math.abs(Math.cos(angle)) > 0.38) { // Left/Right
-                if (dx > 0) activeKeys.add('ArrowRight'); else activeKeys.add('ArrowLeft');
-            }
-            if (Math.abs(Math.sin(angle)) > 0.38) { // Up/Down
-                if (dy > 0) activeKeys.add('ArrowDown'); else activeKeys.add('ArrowUp');
-            }
+            const normalizedX = sx / maxDist;
+            const normalizedY = sy / maxDist;
+            onInput({ mx: normalizedX, my: normalizedY });
+        } else {
+            onInput({ mx: 0, my: 0 });
         }
-        onInput(activeKeys);
     };
 
-    const handleJoystickEnd = () => {
-        setIsJoystickActive(false);
+    const handleJoystickEnd = (e) => {
+        e.preventDefault();
+        activeTouchId.current = null;
         setJoystickPos({ x: 0, y: 0 });
-        onInput(new Set());
+        onInput({ mx: 0, my: 0 });
     };
 
     const btnStyle = (color = 'rgba(255, 255, 255, 0.2)') => ({
-        width: '50px',
-        height: '50px',
+        width: '60px',
+        height: '60px',
         borderRadius: '50%',
         background: color,
-        border: '2px solid rgba(255, 255, 255, 0.4)',
+        border: '3px solid rgba(255, 255, 255, 0.5)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         color: '#fff',
-        backdropFilter: 'blur(4px)',
+        backdropFilter: 'blur(6px)',
         touchAction: 'none',
         pointerEvents: 'auto',
         userSelect: 'none',
         WebkitTapHighlightColor: 'transparent',
-        boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+        boxShadow: '0 6px 12px rgba(0,0,0,0.4)',
+        transition: 'transform 0.1s',
+        activeTransform: 'scale(0.95)'
     });
 
     return (
@@ -93,81 +98,87 @@ const MobileControls = ({ onInput, onAction }) => {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-end',
-            padding: '20px'
+            padding: '15px',
+            paddingBottom: '25px'
         }}>
 
             {/* Left Side: Analog Joystick */}
             <div
                 ref={joystickBaseRef}
                 style={{
-                    width: '120px',
-                    height: '120px',
-                    background: 'rgba(255, 255, 255, 0.1)',
+                    width: '140px',
+                    height: '140px',
+                    background: 'rgba(0, 0, 0, 0.3)',
                     borderRadius: '50%',
-                    border: '2px solid rgba(255, 255, 255, 0.2)',
+                    border: '3px solid rgba(255, 255, 255, 0.3)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     pointerEvents: 'auto',
                     position: 'relative',
-                    touchAction: 'none'
+                    touchAction: 'none',
+                    backdropFilter: 'blur(4px)'
                 }}
                 onTouchStart={handleJoystickStart}
                 onTouchMove={handleJoystickMove}
                 onTouchEnd={handleJoystickEnd}
+                onTouchCancel={handleJoystickEnd}
             >
                 <div
                     style={{
-                        width: '50px',
-                        height: '50px',
-                        background: 'rgba(255, 255, 255, 0.4)',
+                        width: '60px',
+                        height: '60px',
+                        background: 'rgba(255, 255, 255, 0.6)',
                         borderRadius: '50%',
                         position: 'absolute',
                         transform: `translate(${joystickPos.x}px, ${joystickPos.y}px)`,
-                        boxShadow: '0 0 15px rgba(255,255,255,0.3)'
+                        boxShadow: '0 0 20px rgba(255,255,255,0.5)',
+                        border: '2px solid rgba(255,255,255,0.8)',
+                        transition: 'transform 0.05s'
                     }}
                 />
             </div>
 
-            {/* Right Side: Skill Cluster (Ergonomic Arc) */}
-            <div style={{ position: 'relative', width: '180px', height: '180px', pointerEvents: 'none' }}>
+            {/* Right Side: Skill Cluster (Optimized for Thumb) */}
+            <div style={{ position: 'relative', width: '200px', height: '200px', pointerEvents: 'none' }}>
 
                 {/* Basic Attack (Large Center) */}
                 <div
                     style={{
-                        ...btnStyle('rgba(255, 215, 0, 0.4)'),
-                        width: '80px', height: '80px',
-                        position: 'absolute', right: '10px', bottom: '10px'
+                        ...btnStyle('rgba(255, 215, 0, 0.5)'),
+                        width: '90px', height: '90px',
+                        position: 'absolute', right: '0px', bottom: '0px'
                     }}
-                    onTouchStart={() => onAction('attack')}
+                    onTouchStart={(e) => { e.preventDefault(); onAction('attack'); }}
                 >
-                    <Sword size={40} />
+                    <Sword size={45} />
                 </div>
 
                 {/* Skill Q */}
                 <div
-                    style={{ ...btnStyle('rgba(255, 0, 0, 0.3)'), position: 'absolute', right: '100px', bottom: '15px' }}
-                    onTouchStart={() => onAction('skill')}
+                    style={{ ...btnStyle('rgba(255, 50, 50, 0.5)'), position: 'absolute', right: '110px', bottom: '10px' }}
+                    onTouchStart={(e) => { e.preventDefault(); onAction('skill'); }}
                 >
-                    <Zap size={24} />
-                    <span style={{ position: 'absolute', bottom: '-15px', fontSize: '10px' }}>Q</span>
+                    <Zap size={28} />
+                    <span style={{ position: 'absolute', bottom: '-18px', fontSize: '11px', fontWeight: 'bold' }}>Q</span>
                 </div>
 
                 {/* Dash (Space) */}
                 <div
-                    style={{ ...btnStyle('rgba(0, 255, 255, 0.3)'), position: 'absolute', right: '10px', bottom: '100px' }}
-                    onTouchStart={() => onAction('dash')}
+                    style={{ ...btnStyle('rgba(0, 200, 255, 0.5)'), position: 'absolute', right: '5px', bottom: '110px' }}
+                    onTouchStart={(e) => { e.preventDefault(); onAction('dash'); }}
                 >
-                    <ArrowUp size={24} style={{ transform: 'rotate(45deg)' }} />
-                    <span style={{ position: 'absolute', top: '-15px', fontSize: '10px' }}>SPACE</span>
+                    <ArrowUp size={28} style={{ transform: 'rotate(45deg)' }} />
+                    <span style={{ position: 'absolute', top: '-18px', fontSize: '10px', fontWeight: 'bold' }}>DASH</span>
                 </div>
 
                 {/* Extra Skill W (Planned) */}
                 <div
-                    style={{ ...btnStyle('rgba(255, 255, 255, 0.1)'), position: 'absolute', right: '70px', bottom: '80px', opacity: 0.5 }}
+                    style={{ ...btnStyle('rgba(100, 100, 255, 0.3)'), position: 'absolute', right: '80px', bottom: '90px' }}
+                    onTouchStart={(e) => { e.preventDefault(); onAction('skill2'); }}
                 >
-                    <Shield size={20} />
-                    <span style={{ position: 'absolute', top: '-15px', fontSize: '10px' }}>W</span>
+                    <Shield size={24} />
+                    <span style={{ position: 'absolute', top: '-18px', fontSize: '11px', fontWeight: 'bold' }}>W</span>
                 </div>
 
             </div>

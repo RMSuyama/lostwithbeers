@@ -643,20 +643,25 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
 
             <VoiceChat roomId={roomId} userId={user?.id} playerName={playerName} minimal={true} />
 
+
             {/* Render mobile controls only on touch devices */}
             {('ontouchstart' in window || navigator.maxTouchPoints > 0) && (
                 <MobileControls
-                    onInput={(newKeys) => {
-                        ['arrowup', 'arrowdown', 'arrowleft', 'arrowright'].forEach(k => keys.current[k] = false);
-                        newKeys.forEach(k => keys.current[k.toLowerCase()] = true);
+                    onInput={(input) => {
+                        // Mobile joystick sends { mx, my } normalized vectors
+                        if (input && typeof input === 'object' && 'mx' in input) {
+                            controlsRef.current.mobileInput = input;
+                        }
                     }}
                     onAction={(type) => {
                         if (type === 'attack') basicAttack();
                         if (type === 'skill') useSkill();
+                        if (type === 'skill2') useSkill2();
                         if (type === 'dash') dash();
                     }}
                 />
             )}
+
 
             <div style={{ position: 'fixed', top: 20, left: 20, pointerEvents: 'none', zIndex: 10 }}>
                 <div style={{ background: 'rgba(0,0,0,0.6)', padding: '12px', border: '3px solid #ffd700', borderRadius: '4px', minWidth: '200px' }}>

@@ -2,6 +2,7 @@ export class ControlsSystem {
     constructor() {
         this.keys = {};
         this.mouse = { x: 0, y: 0, isDown: false, angle: 0 };
+        this.mobileInput = { mx: 0, my: 0 }; // For mobile joystick
         this.setupListeners();
     }
 
@@ -35,6 +36,11 @@ export class ControlsSystem {
     getMovement(mode = 'wasd') {
         let mx = 0;
         let my = 0;
+
+        // Priority: Mobile input overrides keyboard
+        if (this.mobileInput && (this.mobileInput.mx !== 0 || this.mobileInput.my !== 0)) {
+            return { mx: this.mobileInput.mx, my: this.mobileInput.my };
+        }
 
         if (mode === 'wasd') {
             if (this.keys['w']) my -= 1;
