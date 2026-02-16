@@ -19,6 +19,7 @@ const CHAMPIONS = [
     { id: 'peixe', name: 'Peixe', description: 'Paladino: Baseado no Paladino DPS. Holy Burst.', color: '#fbbf24', theme: '🐟' },
     { id: 'dan', name: 'Dan', description: 'Druida: Baseado no Druida Resto. Cura Massiva.', color: '#16a34a', theme: '🌿' },
     { id: 'huntskan', name: 'Huntskan', description: 'Naga: Baseado no Slardar. Stun e Atropelo.', color: '#0f766e', theme: '🔱' },
+    { id: 'bia', name: 'Bia', description: 'Fada Suporte: Poderosa fadinha com magias de cura e luz estelar.', color: '#f472b6', theme: '🧚‍♀️' },
 ];
 
 const ChampionPicker = ({ onSelect, selectedId }) => {

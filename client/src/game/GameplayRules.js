@@ -1,0 +1,20 @@
+export const RULES = {
+    // MOVEMENT
+    PLAYER_SPEED: 2.8,
+    DASH_SPEED_MULTIPLIER: 1.5,
+    DASH_STAMINA_COST: 30,
+
+    // REGENERATION (per second)
+    HP_REGEN: 5,
+    MANA_REGEN: 2,
+    STAMINA_REGEN: 15,
+
+    // GOD MODE / CHEAT VALS
+    GOD_REGEN: 100,
+    INF_STAMINA_REGEN: 100,
+    SUPER_SPEED: 8.0,
+
+    // COMBAT
+    MONSTER_ATTACK_SPEED: 1000, // ms
+    BASE_MONSTER_DAMAGE: 10,
+};

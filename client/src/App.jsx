@@ -31,17 +31,54 @@ function AppContent() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // Initial Session Check
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
             setLoading(false);
         });
 
+        // Auth State Listener
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
+            if (!session) {
+                // Force immediate cleanup on logout
+                localStorage.removeItem('playerName');
+            }
         });
 
         return () => subscription.unsubscribe();
     }, []);
+
+    // --- SECURE SESSION TIMEOUT (20 Minutes of Inactivity) ---
+    useEffect(() => {
+        if (!session) return;
+
+        let idleTimer;
+        const TIMEOUT_DURATION = 20 * 60 * 1000; // 20 Minutes
+
+        const performLogout = async () => {
+            console.log('[SECURITY] Inactivity timeout reached. Logging out...');
+            await supabase.auth.signOut();
+            setSession(null);
+            window.location.href = '/login'; // Force hard redirect to clear all logic
+        };
+
+        const resetTimer = () => {
+            if (idleTimer) clearTimeout(idleTimer);
+            idleTimer = setTimeout(performLogout, TIMEOUT_DURATION);
+        };
+
+        // Interaction events to reset timer
+        const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+        activityEvents.forEach(evt => window.addEventListener(evt, resetTimer));
+
+        resetTimer();
+
+        return () => {
+            if (idleTimer) clearTimeout(idleTimer);
+            activityEvents.forEach(evt => window.removeEventListener(evt, resetTimer));
+        };
+    }, [session]);
 
     // Global Presence Tracking for "One Room" Policy & Admin Monitoring
     useEffect(() => {

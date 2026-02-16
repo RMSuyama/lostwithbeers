@@ -253,54 +253,164 @@ export class MapRenderer {
                     ctx.stroke();
                 }
             } else if (obj.type === 'player') {
-                ctx.save();
-                ctx.translate(rx, ry);
-
+                ctx.save(); ctx.translate(rx, ry);
                 // Shadow
                 ctx.fillStyle = 'rgba(0,0,0,0.5)';
                 ctx.beginPath(); ctx.ellipse(0, 15, 10, 5, 0, 0, Math.PI * 2); ctx.fill();
 
-                // Draw Champion Skin
+                // Champion Skin
                 const skin = CHAMPION_SKINS[obj.championId] || CHAMPION_SKINS.default;
                 skin(ctx, 0, 0, obj.walkTimer || 0, obj.color, obj.angle || 0, this.jacaAssets, obj.isMoving);
-
                 ctx.restore();
 
                 // Name & Health
                 const isMe = obj.id === camera.followId;
                 if (!isMe || settings.showMyName) {
-                    ctx.fillStyle = '#ffd700'; // Gold Text
-                    ctx.font = 'bold 14px "VT323", Arial';
-                    ctx.textAlign = 'center';
+                    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 14px "VT323", Arial'; ctx.textAlign = 'center';
                     ctx.fillText(obj.name, rx, ry - 40);
                 }
-                // Retro Health Bar
+                // HP Bar
                 ctx.fillStyle = '#000'; ctx.fillRect(rx - 16, ry - 52, 32, 6);
                 ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(rx - 16, ry - 52, 32, 6);
                 ctx.fillStyle = '#ef4444'; ctx.fillRect(rx - 15, ry - 51, (obj.hp / obj.maxHp) * 30, 4);
+
+                // Status Icons (Player)
+                if (obj.statuses) {
+                    let sX = rx - 12; const sY = ry - 65;
+                    Object.entries(obj.statuses).forEach(([type, s]) => {
+                        if (s.duration > 0) {
+                            ctx.font = '12px serif';
+                            const icon = type === 'burn' ? '🔥' : type === 'poison' ? '🤮' : type === 'slow' ? '❄️' : type === 'stun' ? '💫' : '';
+                            ctx.fillText(icon, sX, sY); sX += 14;
+                        }
+                    });
+                }
             } else if (obj.type === 'monster') {
                 ctx.save(); ctx.translate(rx, ry);
-                // Monsters
+
+                // Shadow for all monsters
+                ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                ctx.beginPath();
+                ctx.ellipse(0, obj.type === 'boss' ? 25 : 15, obj.type === 'boss' ? 30 : 15, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+
                 if (obj.type === 'orc') {
-                    ctx.fillStyle = '#b91c1c'; ctx.fillRect(-15, -15, 30, 30); // Base Red Square
-                    ctx.strokeStyle = '#fab005'; ctx.lineWidth = 2; ctx.strokeRect(-15, -15, 30, 30); // Gold Trim
+                    ctx.fillStyle = '#b91c1c'; ctx.fillRect(-15, -15, 30, 30);
+                    ctx.strokeStyle = '#fab005'; ctx.lineWidth = 2; ctx.strokeRect(-15, -15, 30, 30);
+                } else if (obj.type === 'elite') {
+                    // Elite Glow
+                    ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 15;
+                    ctx.fillStyle = '#7c2d12'; ctx.fillRect(-20, -20, 40, 40);
+                    ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 3; ctx.strokeRect(-20, -20, 40, 40);
+                } else if (obj.type === 'boss') {
+                    // Boss: Massive armored cube with pulsing core
+                    ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 25;
+                    ctx.fillStyle = '#450a0a'; ctx.fillRect(-40, -40, 80, 80);
+                    ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 5; ctx.strokeRect(-40, -40, 80, 80);
+                    // Core
+                    const pulse = (Math.sin(Date.now() * 0.005) + 1) / 2;
+                    ctx.fillStyle = `rgba(239, 68, 68, ${0.3 + pulse * 0.7})`;
+                    ctx.fillRect(-20, -20, 40, 40);
                 } else {
                     ctx.fillStyle = '#22d3ee'; ctx.fillRect(-10, -10, 20, 20);
                 }
                 ctx.restore();
-                // HP
-                ctx.fillStyle = '#000'; ctx.fillRect(rx - 16, ry - 28, 32, 5);
-                ctx.fillStyle = '#b91c1c'; ctx.fillRect(rx - 15, ry - 27.5, (obj.hp / obj.maxHp) * 30, 3);
+
+                // HP Bar
+                const barY = obj.type === 'elite' ? ry - 35 : ry - 28;
+                ctx.fillStyle = '#000'; ctx.fillRect(rx - 16, barY, 32, 5);
+                ctx.fillStyle = obj.type === 'elite' ? '#ea580c' : '#b91c1c';
+                ctx.fillRect(rx - 15, barY + 0.5, (obj.hp / obj.maxHp) * 30, 4);
+
+                // Status Icons
+                if (obj.statuses) {
+                    let sX = rx - 12;
+                    const sY = barY - 12;
+                    Object.entries(obj.statuses).forEach(([type, s]) => {
+                        if (s.duration > 0) {
+                            ctx.font = '12px serif';
+                            const icon = type === 'burn' ? '🔥' : type === 'poison' ? '🤮' : type === 'slow' ? '❄️' : type === 'stun' ? '💫' : '';
+                            ctx.fillText(icon, sX, sY);
+                            sX += 14;
+                        }
+                    });
+                }
             }
         });
 
-        // Projectiles
+        // Projectiles — ADVANCED FX
         projectiles.forEach(p => {
-            ctx.fillStyle = p.color || '#ffd700';
-            ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 10;
-            ctx.beginPath(); ctx.arc(p.x + offsetX, p.y + offsetY, p.big ? 8 : 4, 0, Math.PI * 2); ctx.fill();
+            const px = p.x + offsetX;
+            const py = p.y + offsetY;
+
+            ctx.save();
+
+            // Trail
+            if (p.trail) {
+                ctx.globalAlpha = 0.25;
+                for (let i = 1; i <= 4; i++) {
+                    ctx.beginPath();
+                    ctx.arc(
+                        px - p.vx * i * 2,
+                        py - p.vy * i * 2,
+                        (p.big ? 8 : 4) - i * 0.7,
+                        0,
+                        Math.PI * 2
+                    );
+                    ctx.fillStyle = p.color || '#ffd700';
+                    ctx.fill();
+                }
+                ctx.globalAlpha = 1;
+            }
+
+            // Rotate based on movement (atan2 expects y, x)
+            const angle = Math.atan2(p.vy, p.vx);
+            ctx.translate(px, py);
+            ctx.rotate(angle);
+
+            // Draw core
+            ctx.shadowColor = p.color || '#ffd700';
+            ctx.shadowBlur = 10;
+
+            if (p.type === 'boomerang') {
+                ctx.strokeStyle = p.color || '#ffd700';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(0, 0, 6, 0, Math.PI * 1.5);
+                ctx.stroke();
+            } else if (p.type === 'chain') {
+                ctx.fillStyle = '#60a5fa';
+                ctx.fillRect(-4, -4, 8, 8);
+            } else if (p.type === 'curve') {
+                ctx.fillStyle = p.color || '#a855f7';
+                ctx.beginPath();
+                ctx.arc(0, 0, 6, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                ctx.fillStyle = p.color || '#ffd700';
+                ctx.beginPath();
+                ctx.arc(0, 0, p.big ? 8 : 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
             ctx.shadowBlur = 0;
         });
+
+        // Wave Countdown UI
+        // We use the timer property if available on any projectile or explicit data
+        const timerObj = entities.find(e => e.type === 'wave_timer');
+        const timer = timerObj ? timerObj.value : 0;
+
+        if (timer > 0) {
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillRect(canvas.width / 2 - 120, 20, 240, 40);
+            ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2;
+            ctx.strokeRect(canvas.width / 2 - 120, 20, 240, 40);
+
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 20px "VT323"'; ctx.textAlign = 'center';
+            ctx.fillText(`PRÓXIMA ONDA: ${Math.ceil(timer)}s`, canvas.width / 2, 47);
+        }
 
         if (attackEffect) {
             ctx.save(); ctx.translate(attackEffect.x + offsetX, attackEffect.y + offsetY);

@@ -1,14 +1,14 @@
 import { supabase } from '../../supabaseClient';
 
 export class NetworkSystem {
-    constructor(roomId, playerName, onPlayerUpdate, onWaveSync, onMobUpdate) {
+    constructor(roomId, playerName, onPlayerUpdate, onGameStateSync) {
         this.roomId = roomId;
         this.playerName = playerName;
         this.channel = null;
         this.onPlayerUpdate = onPlayerUpdate;
-        this.onWaveSync = onWaveSync;
-        this.onMobUpdate = onMobUpdate;
+        this.onGameStateSync = onGameStateSync;
         this.lastBroadcast = 0;
+        this.isJoined = false;
     }
 
     connect() {
@@ -20,15 +20,15 @@ export class NetworkSystem {
                     this.onPlayerUpdate(payload);
                 }
             })
-            .on('broadcast', { event: 'wave_sync' }, ({ payload }) => {
-                this.onWaveSync(payload);
-            })
-            .on('broadcast', { event: 'mob_update' }, ({ payload }) => {
-                this.onMobUpdate(payload);
+            .on('broadcast', { event: 'game_state_sync' }, ({ payload }) => {
+                if (this.onGameStateSync) this.onGameStateSync(payload);
             })
             .subscribe((status) => {
                 if (status === 'SUBSCRIBED') {
+                    this.isJoined = true;
                     console.log(`[Network] Connected to room ${this.roomId}`);
+                } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+                    this.isJoined = false;
                 }
             });
     }
@@ -37,7 +37,7 @@ export class NetworkSystem {
         const now = Date.now();
         if (now - this.lastBroadcast < 50) return; // Cap at 20Hz
 
-        if (!this.channel) return;
+        if (!this.channel || !this.isJoined) return;
         this.channel.send({
             type: 'broadcast',
             event: 'player_update',
@@ -46,32 +46,15 @@ export class NetworkSystem {
         this.lastBroadcast = now;
     }
 
-    sendWaveSync(waveStats, baseHp) {
-        if (!this.channel) return;
+    /**
+     * Authoritative State Sync (Host only)
+     */
+    sendGameStateUpdate(gameState) {
+        if (!this.channel || !this.isJoined) return;
         this.channel.send({
             type: 'broadcast',
-            event: 'wave_sync',
-            payload: { wave: waveStats, baseHp }
-        });
-    }
-
-    sendMobUpdate(mobs) {
-        // Optimize: Only send essential data (id, x, y, hp, type)
-        // Maybe compress or delta compressed in future, for now raw list
-        const payload = mobs.map(m => ({
-            id: m.id,
-            x: Math.round(m.x),
-            y: Math.round(m.y),
-            hp: m.hp,
-            maxHp: m.maxHp,
-            type: m.type
-        }));
-
-        if (!this.channel) return;
-        this.channel.send({
-            type: 'broadcast',
-            event: 'mob_update',
-            payload
+            event: 'game_state_sync',
+            payload: gameState
         });
     }
 

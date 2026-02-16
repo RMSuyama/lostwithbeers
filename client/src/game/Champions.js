@@ -28,13 +28,13 @@ export const CHAMPIONS = {
     },
     shiryu: {
         name: 'Shiryu Suyama', color: '#064e3b', hp: 90, mana: 130,
-        basic: { range: 250, arc: 0.6, dmg: 1, ranged: true },
+        basic: { range: 250, arc: 0.6, dmg: 1, ranged: true, proj: { maxPierce: 2 } },
         skill: { name: 'Sopro Ancestral', cost: 35, cd: 6000 },
         skill2: { name: 'Dragon Breath', cost: 20, cd: 5000 }
     },
     charles: {
         name: 'J. Charles', color: '#475569', hp: 80, mana: 70,
-        basic: { range: 350, arc: 0.3, dmg: 1, ranged: true },
+        basic: { range: 350, arc: 0.3, dmg: 1, ranged: true, proj: { type: 'chain', bounce: 5 } },
         skill: { name: 'Bateria de Guerra', cost: 25, cd: 7000 },
         skill2: { name: 'Artillery Strike', cost: 15, cd: 4000 }
     },
@@ -52,7 +52,7 @@ export const CHAMPIONS = {
     },
     milan: {
         name: 'Milan', color: '#4a044e', hp: 70, mana: 160,
-        basic: { range: 190, arc: 2.0, dmg: 1 },
+        basic: { range: 190, arc: 2.0, dmg: 1, ranged: true, proj: { type: 'lastHitReturn' } },
         skill: { name: 'Blefe Espectral', cost: 25, cd: 5000 },
         skill2: { name: 'Card Trick', cost: 10, cd: 2000 }
     },
@@ -70,19 +70,19 @@ export const CHAMPIONS = {
     },
     klebao: {
         name: 'Klebão', color: '#ffffff', hp: 200, mana: 100,
-        basic: { range: 300, arc: 0.2, dmg: 1, ranged: true },
+        basic: { range: 300, arc: 0.2, dmg: 1, ranged: true, proj: { maxPierce: 5 } },
         skill: { name: 'Julgamento Supremo', cost: 50, cd: 12000 },
         skill2: { name: 'Mao de Deus', cost: 20, cd: 5000 }
     },
     poisoncraft: {
         name: 'Poisoncraft', color: '#4d7c0f', hp: 100, mana: 120,
-        basic: { range: 250, arc: 0.5, dmg: 1, ranged: true },
+        basic: { range: 250, arc: 0.5, dmg: 1, ranged: true, proj: { maxPierce: 3 } },
         skill: { name: 'Venom Nova', cost: 40, cd: 8000 },
         skill2: { name: 'Plague Bolt', cost: 10, cd: 3000 }
     },
     foxz: {
         name: 'Foxz', color: '#7e22ce', hp: 90, mana: 140,
-        basic: { range: 300, arc: 0.4, dmg: 1, ranged: true },
+        basic: { range: 300, arc: 0.4, dmg: 1, ranged: true, proj: { type: 'curve', curve: -1.5 } },
         skill: { name: 'Soul Drain', cost: 35, cd: 7000 },
         skill2: { name: 'Dark Pact', cost: 20, cd: 6000 }
     },
@@ -94,7 +94,7 @@ export const CHAMPIONS = {
     },
     dan: {
         name: 'Dan', color: '#16a34a', hp: 110, mana: 150,
-        basic: { range: 220, arc: 0.6, dmg: 1, ranged: true },
+        basic: { range: 220, arc: 0.6, dmg: 1, ranged: true, proj: { type: 'boomerang' } },
         skill: { name: 'Rejuvenation', cost: 45, cd: 12000 },
         skill2: { name: 'Nature Grace', cost: 15, cd: 5000 }
     },
@@ -103,6 +103,18 @@ export const CHAMPIONS = {
         basic: { range: 110, arc: 2.2, dmg: 1, kb: 40 },
         skill: { name: 'Slithereen Crush', cost: 25, cd: 5000 },
         skill2: { name: 'Hunter Mark', cost: 10, cd: 3000 }
+    },
+    bia: {
+        name: 'Bia', color: '#f472b6', hp: 120, mana: 120,
+        basic: { range: 250, arc: 0.8, dmg: 1.2, ranged: true, proj: { type: 'boomerang' } },
+        skill: { name: 'Encanto de Fada', cost: 30, cd: 7000 },
+        skill2: { name: 'Pó de Estrela', cost: 40, cd: 10000 }
+    },
+    nadson: {
+        name: 'Nadson', color: '#f97316', hp: 100, mana: 80,
+        basic: { range: 300, arc: 0.5, dmg: 1, ranged: true, proj: { type: 'curve', curve: 2.2 } },
+        skill: { name: 'Pirotecnia', cost: 20, cd: 5000 },
+        skill2: { name: 'Explosão Curvilínea', cost: 30, cd: 8000 }
     }
 };
 

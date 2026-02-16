@@ -13,6 +13,12 @@ import { CombatSystem } from './systems/CombatSystem';
 // Modules
 import { PhysicsSystem } from './systems/PhysicsSystem';
 import { castSkill } from './Skills';
+import { RULES } from './GameplayRules';
+import { GameState } from './GameState';
+import { RhythmSystem } from './systems/RhythmSystem';
+import { ProjectileSystem } from './systems/ProjectileSystem';
+import { PerformanceSystem } from './systems/PerformanceSystem';
+import { ControlsSystem } from './systems/ControlsSystem';
 import { Sword, Zap, Shield, Play } from 'lucide-react';
 import MobileControls from '../components/MobileControls';
 import VoiceChat from '../components/VoiceChat';
@@ -26,17 +32,33 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     // State
     const [gameState, setGameState] = useState('starting'); // starting, playing, dead, over
     const [startTimer, setStartTimer] = useState(5);
-    const [uiStats, setUiStats] = useState({ hp: 100, maxHp: 100, mana: 50, maxMana: 50, level: 1, xp: 0, maxXp: 50 });
+    const [uiStats, setUiStats] = useState({ hp: 100, maxHp: 100, mana: 50, maxMana: 50, stamina: 100, maxStamina: 100, level: 1, xp: 0, maxXp: 50 });
     const [waveUi, setWaveUi] = useState({ current: 0, timer: 60, total: 0, dead: 0, baseHp: 1000 });
     const [showEscMenu, setShowEscMenu] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [showScoreboard, setShowScoreboard] = useState(false);
-    const [settings, setSettings] = useState(() => JSON.parse(localStorage.getItem('gameSettings') || '{"showMyName": true, "controlMode": "both", "musicEnabled": true}'));
+    const [settings, setSettings] = useState(() => {
+        const savedRaw = localStorage.getItem('gameSettings');
+        const saved = savedRaw ? JSON.parse(savedRaw) : { showMyName: true, controlMode: 'wasd', musicEnabled: true };
+
+        // Migrate legacy 'both' mode to 'wasd'
+        if (saved.controlMode === 'both') saved.controlMode = 'wasd';
+
+        return {
+            ...saved,
+            godMode: saved.godMode || false,
+            infStamina: saved.infStamina || false,
+            superSpeed: saved.superSpeed || false
+        };
+    });
 
     // Refs (Mutable Game State)
     const isHost = useRef(false);
     const gameStateRef = useRef(gameState);
     useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
+
+    const settingsRef = useRef(settings);
+    useEffect(() => { settingsRef.current = settings; }, [settings]);
 
     const playersRef = useRef([]);
     const myPos = useRef({ x: POSITIONS.BASE.x + Math.random() * 50, y: POSITIONS.BASE.y + Math.random() * 50 });
@@ -50,7 +72,10 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     // Stats Ref
     const statsRef = useRef({
         ...getChamp(championId),
+        maxHp: getChamp(championId).hp,
+        maxMana: getChamp(championId).mana,
         atk: 1,
+        stamina: 100, maxStamina: 100,
         xp: 0, maxXp: 50, level: 1,
         totalDamage: 0, kills: 0
     });
@@ -60,6 +85,12 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const networkRef = useRef(null);
     const mobSystemRef = useRef(null);
     const combatRef = useRef(null);
+    const gameStateObj = useRef(new GameState());
+    const rhythmSystem = useRef(new RhythmSystem(120)); // Assume 120 BPM for now
+    const performanceSystem = useRef(new PerformanceSystem());
+    const projectileSystem = useRef(new ProjectileSystem(performanceSystem.current));
+    const controlsRef = useRef(new ControlsSystem());
+    const lastAttack = useRef(0);
 
     // Countdown
     useEffect(() => {
@@ -92,7 +123,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     console.log('[GAME] I am HOST');
                 }
 
-                mobSystemRef.current = new MobSystem(isHost.current);
+                mobSystemRef.current = new MobSystem(isHost.current, performanceSystem.current);
                 combatRef.current = new CombatSystem();
 
                 networkRef.current = new NetworkSystem(
@@ -103,15 +134,18 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                         if (idx === -1) playersRef.current.push(payload);
                         else playersRef.current[idx] = payload;
                     },
-                    (payload) => {
+                    (state) => {
                         if (!isHost.current) {
-                            mobSystemRef.current.waveStats = payload.wave;
-                            baseHpRef.current = payload.baseHp;
-                        }
-                    },
-                    (payload) => {
-                        if (!isHost.current) {
-                            mobSystemRef.current.syncFromHost(payload);
+                            gameStateObj.current.syncFromHost(state);
+                            if (mobSystemRef.current) {
+                                mobSystemRef.current.syncFromHost(state.mobs);
+                                mobSystemRef.current.waveStats.current = state.wave;
+                                mobSystemRef.current.waveStats.timer = state.timer || 0;
+                            }
+                            if (projectileSystem.current) {
+                                projectileSystem.current.projectiles = state.projectiles || [];
+                            }
+                            if (state.baseHp !== undefined) baseHpRef.current = state.baseHp;
                         }
                     }
                 );
@@ -142,52 +176,36 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         };
         loop();
 
-        const handleKeyDown = (e) => {
+        const handleKeyActions = (e) => {
             const key = e.key.toLowerCase();
             if (key === 'escape') setShowEscMenu(p => !p);
-            keys.current[key] = true;
 
             if (gameStateRef.current === 'playing' && !showEscMenu) {
-                const mode = settings.controlMode || 'both';
-                const isWASD = mode === 'wasd' || mode === 'both';
-                const isArrows = mode === 'arrows' || mode === 'both';
+                const s = settingsRef.current;
+                const isWASD = s.controlMode === 'wasd';
+                const isArrows = s.controlMode === 'arrows';
 
-                if ((isWASD && key === 'q') || (isArrows && key === 'a')) basicAttack();
-
-                // SKILLS (1234 for WASD, QWER for Arrows)
+                // Discrete Actions (Skills)
                 if (isWASD) {
                     if (key === '1') useSkill(1);
                     if (key === '2') useSkill(2);
-                    if (key === '3') useSkill(1);
-                    if (key === '4') useSkill(2);
-                }
-                if (isArrows) {
+                    if (key === 'q') basicAttack();
+                } else if (isArrows) {
                     if (key === 'q') useSkill(1);
                     if (key === 'w') useSkill(2);
-                    if (key === 'e') useSkill(1);
-                    if (key === 'r') useSkill(2);
+                    if (key === 'a') basicAttack();
                 }
 
                 if (key === ' ') dash();
-                if (key === 'tab') {
-                    e.preventDefault();
-                    setShowScoreboard(true);
-                }
             }
         };
-        const handleKeyUp = (e) => {
-            const key = e.key.toLowerCase();
-            keys.current[key] = false;
-            if (key === 'tab') setShowScoreboard(false);
-        };
 
-        window.addEventListener('keydown', handleKeyDown);
-        window.addEventListener('keyup', handleKeyUp);
+        window.addEventListener('keydown', handleKeyActions);
+
 
         return () => {
             window.removeEventListener('resize', resize);
-            window.removeEventListener('keydown', handleKeyDown);
-            window.removeEventListener('keyup', handleKeyUp);
+            window.removeEventListener('keydown', handleKeyActions);
             cancelAnimationFrame(animationFrame);
             if (networkRef.current) networkRef.current.cleanup();
         };
@@ -201,9 +219,12 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         cameraRef.current.y += (myPos.current.y - cameraRef.current.y) * lerp;
 
         if (mobSystemRef.current && combatRef.current) {
-            const { xpGain, kills } = mobSystemRef.current.update(
+            // Update Rhythm
+            rhythmSystem.current.update();
+
+            const { xpGain, kills, playerDamage } = mobSystemRef.current.update(
                 dt,
-                [...playersRef.current, { id: playerName, x: myPos.current.x, y: myPos.current.y }],
+                [...playersRef.current, { id: playerName, x: myPos.current.x, y: myPos.current.y, hp: statsRef.current.hp }],
                 baseHpRef,
                 (x, y, val, color) => combatRef.current.spawnDamage(x, y, val, color),
                 setGameState,
@@ -213,20 +234,64 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             if (xpGain > 0) gainXp(xpGain);
             if (kills > 0) statsRef.current.kills += kills;
 
+            // Update Projectiles
+            projectileSystem.current.update(
+                dt,
+                mobSystemRef.current.mobs,
+                playersRef.current,
+                (p, m) => {
+                    // On Hit Mob
+                    m.hp -= p.dmg;
+                    combatRef.current.spawnDamage(m.x, m.y, Math.ceil(p.dmg), '#fff');
+                    combatRef.current.addAttackEffect(m.x, m.y, Math.random() * Math.PI * 2, 'impact');
+                }
+            );
+
+            // Handle player damage
+            if (playerDamage && playerDamage.length > 0) {
+                const s = settingsRef.current;
+                playerDamage.forEach(d => {
+                    if (d.id === playerName && !s.godMode && gameStateRef.current === 'playing') {
+                        statsRef.current.hp = Math.max(0, statsRef.current.hp - d.dmg);
+                        combatRef.current.spawnDamage(d.x, d.y, d.dmg, '#ff0000');
+                        if (statsRef.current.hp <= 0) {
+                            statsRef.current.hp = 0;
+                            setGameState('dead');
+                        }
+                    }
+                });
+            }
+
+            // Check Global Game Over Condition (All players dead)
+            if (gameStateRef.current === 'playing' || gameStateRef.current === 'dead') {
+                const allPlayers = [...playersRef.current, { id: playerName, hp: statsRef.current.hp }];
+                const anyAlive = allPlayers.some(p => p.hp === undefined || p.hp > 0);
+                // Only trigger Game Over if players exist and all are dead
+                if (allPlayers.length > 0 && !anyAlive) {
+                    setGameState('over');
+                }
+            }
+
             if (isHost.current) {
-                networkRef.current.sendMobUpdate(mobSystemRef.current.mobs);
-                const ws = mobSystemRef.current.waveStats;
-                if (ws.timer > 0) ws.timer -= dt;
-                else if (ws.deadMobs >= ws.totalMobs) {
-                    mobSystemRef.current.startWave(ws.current + 1);
-                }
-                if (Math.random() < 0.05) {
-                    networkRef.current.sendWaveSync(ws, baseHpRef.current);
-                }
+                // Update Authoritative GameState with current snapshots
+                gameStateObj.current.mobs = mobSystemRef.current.mobs;
+                gameStateObj.current.projectiles = projectileSystem.current.projectiles;
+                gameStateObj.current.wave = mobSystemRef.current.waveSystem.currentWave;
+                gameStateObj.current.timer = Math.ceil(mobSystemRef.current.waveSystem.nextWaveTimer);
+                gameStateObj.current.baseHp = baseHpRef.current;
+
+                networkRef.current.sendGameStateUpdate(gameStateObj.current.getSnapshot());
             }
 
             combatRef.current.update(dt, mobSystemRef.current.mobs, (x, y, v) => combatRef.current.spawnDamage(x, y, v));
         }
+
+        // Efficient UI updates
+        setUiStats({ ...statsRef.current });
+
+        const myStatuses = mobSystemRef.current?.statusSystem?.effects?.get(playerName) || [];
+        const statusObj = {};
+        myStatuses.forEach(s => statusObj[s.type] = s);
 
         if (networkRef.current) {
             const me = {
@@ -241,46 +306,54 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 maxHp: statsRef.current.maxHp,
                 kills: statsRef.current.kills,
                 walkTimer: walkTimerRef.current,
+                statuses: statusObj,
                 isMoving: Math.hypot(myPos.current.x - lastPosRef.current.x, myPos.current.y - lastPosRef.current.y) > 0.1
             };
             networkRef.current.sendPlayerUpdate(me);
         }
 
-        // 4. Natural Regeneration (5 HP/sec and Mana)
-        const regenRate = 5; // HP per second
-        const manaRegen = 2; // Mana per second
+        // 4. Natural Regeneration (HP, Mana, Stamina)
+        const s = settingsRef.current;
+        const regenRate = s.godMode ? 100 : 5;
+        const manaRegen = 2;
+        const stamRegen = s.infStamina ? 100 : 15;
+
         if (statsRef.current.hp < statsRef.current.maxHp) {
             statsRef.current.hp = Math.min(statsRef.current.maxHp, statsRef.current.hp + regenRate * dt);
         }
         if (statsRef.current.mana < statsRef.current.maxMana) {
             statsRef.current.mana = Math.min(statsRef.current.maxMana, statsRef.current.mana + manaRegen * dt);
         }
+        if (statsRef.current.stamina < statsRef.current.maxStamina) {
+            statsRef.current.stamina = Math.min(statsRef.current.maxStamina, statsRef.current.stamina + stamRegen * dt);
+        }
 
-        if (Math.random() < 0.1) {
-            setUiStats({ ...statsRef.current });
-            if (mobSystemRef.current) {
-                const ws = mobSystemRef.current.waveStats;
-                setWaveUi({
-                    current: ws.current,
-                    timer: ws.timer,
-                    total: ws.totalMobs,
-                    dead: ws.deadMobs,
-                    baseHp: baseHpRef.current
-                });
-            }
+        // Efficient UI updates
+        setUiStats({ ...statsRef.current });
+
+        if (Math.random() < 0.1 && mobSystemRef.current) {
+            const ws = mobSystemRef.current.waveStats;
+            setWaveUi({
+                current: ws.current,
+                timer: ws.timer,
+                total: ws.totalMobs,
+                dead: ws.deadMobs,
+                baseHp: baseHpRef.current
+            });
         }
     };
 
     const handleMovement = (dt) => {
-        const speed = 4;
-        let mx = 0, my = 0;
-        const k = keys.current;
-        const mode = settings.controlMode || 'both';
+        const s = settingsRef.current;
+        const mode = s.controlMode || 'wasd';
+        const rawMove = controlsRef.current.getMovement(mode);
 
-        if (((mode === 'both' || mode === 'arrows') && k['arrowup']) || ((mode === 'both' || mode === 'wasd') && k['w'])) my -= speed;
-        if (((mode === 'both' || mode === 'arrows') && k['arrowdown']) || ((mode === 'both' || mode === 'wasd') && k['s'])) my += speed;
-        if (((mode === 'both' || mode === 'arrows') && k['arrowleft']) || ((mode === 'both' || mode === 'wasd') && k['a'])) mx -= speed;
-        if (((mode === 'both' || mode === 'arrows') && k['arrowright']) || ((mode === 'both' || mode === 'wasd') && k['d'])) mx += speed;
+        const speed = s.superSpeed ? RULES.SUPER_SPEED : RULES.PLAYER_SPEED;
+        let mx = rawMove.mx * speed;
+        let my = rawMove.my * speed;
+
+        // Friction / Smoothing for "less silly" controls
+        // Currently direct, but let's ensure normalization from getMovement is used
 
         if (mx !== 0 || my !== 0) {
             let nextX = myPos.current.x + mx;
@@ -296,31 +369,68 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             PhysicsSystem.resolveEntityCollision(myPos.current, playersRef.current, 20);
             PhysicsSystem.clampToMap(myPos.current, MAP_WIDTH, MAP_HEIGHT);
 
+            // Angle updates from movement
             facingAngle.current = Math.atan2(my, mx);
             walkTimerRef.current += dt * 5;
             lastPosRef.current = { ...myPos.current };
         }
+
+        // Mouse Overrides Angle
+        if (controlsRef.current.mouse.isDown) {
+            facingAngle.current = controlsRef.current.mouse.angle;
+            basicAttack();
+        }
+
+        // Tab for Scoreboard (Polling-friendly)
+        setShowScoreboard(controlsRef.current.isPressed('tab'));
     };
 
     const basicAttack = () => {
         if (!combatRef.current) return;
         const champ = getChamp(championId);
-        combatRef.current.addAttackEffect(myPos.current.x, myPos.current.y, facingAngle.current, championId);
+
+        const now = Date.now();
+        if (now - (lastAttack.current || 0) < (champ.basic.cd || 400)) return;
+        lastAttack.current = now;
+
+        // Rhythm Validation
+        const rhythm = rhythmSystem.current.validateInput();
+        const finalDmg = statsRef.current.atk * champ.basic.dmg * (rhythm.multiplier || 1.0);
+
+        if (rhythm.rating === 'perfect') {
+            combatRef.current.spawnDamage(myPos.current.x, myPos.current.y - 40, "PERFECT!", "#ffd700");
+        } else if (rhythm.rating === 'miss') {
+            combatRef.current.spawnDamage(myPos.current.x, myPos.current.y - 40, "MISS...", "#666");
+            return; // Penalty: attack fails
+        }
+
+        const angle = facingAngle.current;
+        combatRef.current.addAttackEffect(myPos.current.x, myPos.current.y, angle, championId);
 
         if (champ.basic.ranged) {
-            combatRef.current.spawnProjectile(myPos.current.x, myPos.current.y, facingAngle.current, statsRef.current, champ.color);
+            // Use new ProjectileSystem with champion config
+            projectileSystem.current.spawn({
+                x: myPos.current.x,
+                y: myPos.current.y,
+                angle: angle,
+                speed: champ.basic.projSpeed || 10,
+                ownerId: playerName,
+                dmg: finalDmg,
+                lifetime: champ.basic.projLifetime || 1500,
+                color: champ.color || '#fff',
+                ...(champ.basic.proj || { type: 'linear' })
+            });
         } else {
             mobSystemRef.current.mobs.forEach(m => {
                 const dist = Math.hypot(m.x - myPos.current.x, m.y - myPos.current.y);
                 if (dist < champ.basic.range + 20) {
                     const angleToMob = Math.atan2(m.y - myPos.current.y, m.x - myPos.current.x);
-                    let diff = angleToMob - facingAngle.current;
+                    let diff = angleToMob - angle;
                     while (diff < -Math.PI) diff += Math.PI * 2;
                     while (diff > Math.PI) diff -= Math.PI * 2;
                     if (Math.abs(diff) < champ.basic.arc / 2) {
-                        const dmg = statsRef.current.atk;
-                        m.hp -= dmg;
-                        combatRef.current.spawnDamage(m.x, m.y, dmg, '#fff');
+                        m.hp -= finalDmg;
+                        combatRef.current.spawnDamage(m.x, m.y, Math.ceil(finalDmg), '#fff');
                     }
                 }
             });
@@ -340,9 +450,20 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         const now = Date.now();
         if (statsRef.current[skillKey] && now - statsRef.current[skillKey] < skillData.cd) return;
 
-        const result = castSkill(championId, { ...myPos.current, angle: facingAngle.current, level: statsRef.current.level }, mobSystemRef.current.mobs, combatRef.current.projectiles, engineRef.current?.mapData, combatRef.current.damageNumbers, { current: null }, index);
+        const result = castSkill(
+            championId,
+            { ...myPos.current, angle: facingAngle.current, level: statsRef.current.level },
+            mobSystemRef.current.mobs,
+            projectileSystem.current,
+            mobSystemRef.current.statusSystem,
+            engineRef.current?.mapData,
+            combatRef.current.damageNumbers,
+            { current: null },
+            index
+        );
         statsRef.current.mana -= skillData.cost;
         statsRef.current[skillKey] = now;
+        setUiStats({ ...statsRef.current });
         combatRef.current.addAttackEffect(myPos.current.x, myPos.current.y, facingAngle.current, 'skill');
 
         if (result.heal) {
@@ -354,6 +475,11 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     };
 
     const dash = () => {
+        if (!settings.infStamina && statsRef.current.stamina < RULES.DASH_STAMINA_COST) {
+            combatRef.current.spawnDamage(myPos.current.x, myPos.current.y, "CANSAÇO!", "#f59e0b");
+            return;
+        }
+
         const ddist = 140;
         const map = engineRef.current?.mapData;
 
@@ -363,7 +489,6 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         const cos = Math.cos(facingAngle.current);
         const sin = Math.sin(facingAngle.current);
 
-        // Sub-stepping to find furthest reachable point
         const step = 5;
         for (let d = step; d <= ddist; d += step) {
             const nextX = myPos.current.x + cos * d;
@@ -372,22 +497,23 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             if (PhysicsSystem.canPass(nextX, nextY, 'dash', map)) {
                 targetX = nextX;
                 targetY = nextY;
-            } else {
-                // Approximate even closer pixel by pixel
-                for (let dd = 1; dd < step; dd++) {
-                    const preciseX = targetX + cos * dd;
-                    const preciseY = targetY + sin * dd;
-                    if (PhysicsSystem.canPass(preciseX, preciseY, 'dash', map)) {
-                        targetX = preciseX;
-                        targetY = preciseY;
-                    } else break;
-                }
-                break;
-            }
+            } else break;
         }
 
         myPos.current.x = targetX;
         myPos.current.y = targetY;
+
+        if (!settings.infStamina) statsRef.current.stamina -= RULES.DASH_STAMINA_COST;
+        combatRef.current.addAttackEffect(myPos.current.x, myPos.current.y, facingAngle.current, 'burst');
+    };
+
+    const respawn = () => {
+        statsRef.current.hp = statsRef.current.maxHp;
+        statsRef.current.mana = statsRef.current.maxMana;
+        statsRef.current.stamina = statsRef.current.maxStamina;
+        myPos.current = { x: POSITIONS.BASE.x + Math.random() * 50, y: POSITIONS.BASE.y + Math.random() * 50 };
+        setGameState('playing');
+        setUiStats({ ...statsRef.current });
     };
 
     const gainXp = (amount) => {
@@ -418,7 +544,27 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             walkTimer: walkTimerRef.current,
             isMoving: Math.hypot(myPos.current.x - lastPosRef.current.x, myPos.current.y - lastPosRef.current.y) > 0.1
         };
-        engineRef.current.draw([...playersRef.current, me], cameraRef.current, [], mobSystemRef.current ? mobSystemRef.current.mobs : [], combatRef.current ? combatRef.current.projectiles : [], combatRef.current ? combatRef.current.damageNumbers : [], combatRef.current?.attackEffects[0], baseHpRef.current, 1000, []);
+        const extraEntities = [];
+        if (mobSystemRef.current?.waveSystem?.nextWaveTimer > 0) {
+            extraEntities.push({ type: 'wave_timer', value: mobSystemRef.current.waveSystem.nextWaveTimer });
+        }
+
+        const myStatuses = mobSystemRef.current?.statusSystem?.effects?.get(playerName) || [];
+        const statusObj = {};
+        myStatuses.forEach(s => statusObj[s.type] = s);
+
+        engineRef.current.draw(
+            [...playersRef.current, { ...me, statuses: statusObj }, ...extraEntities],
+            cameraRef.current,
+            [],
+            mobSystemRef.current ? mobSystemRef.current.mobs : [],
+            projectileSystem.current ? projectileSystem.current.projectiles : [],
+            combatRef.current ? combatRef.current.damageNumbers : [],
+            combatRef.current?.attackEffects[0],
+            baseHpRef.current,
+            1000,
+            []
+        );
     };
 
     // RENDER MINIMAP LOOP
@@ -473,6 +619,26 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 </div>
             )}
 
+            {gameState === 'dead' && (
+                <div style={{ position: 'absolute', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(50,0,0,0.7)', color: '#fff' }}>
+                    <h1 style={{ fontSize: '5rem', color: '#ff4444', textShadow: '4px 4px #000' }}>VOCÊ CAIU!</h1>
+                    <p style={{ fontSize: '2rem', marginBottom: '30px' }}>Mas a batalha ainda não acabou...</p>
+                    <button onClick={respawn} style={{ background: '#22c55e', color: '#fff', padding: '15px 40px', fontSize: '2.5rem', fontFamily: 'VT323', border: '5px solid #fff', cursor: 'pointer', borderRadius: '8px', boxShadow: '0 0 20px #22c55e' }}>
+                        RENASCER (RESSURREIÇÃO)
+                    </button>
+                </div>
+            )}
+
+            {gameState === 'over' && (
+                <div style={{ position: 'absolute', inset: 0, zIndex: 10000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.95)', color: '#ffd700' }}>
+                    <h1 style={{ fontSize: '6rem', marginBottom: '10px', textShadow: '0 0 30px #ff0000', color: '#ff0000' }}>FIM DE JOGO</h1>
+                    <p style={{ fontSize: '2rem', color: '#fff', marginBottom: '40px' }}>Todos os heróis foram derrotados.</p>
+                    <button onClick={handleExitToLobby} style={{ background: '#ffd700', color: '#000', padding: '15px 60px', fontSize: '2.5rem', fontFamily: 'VT323', border: 'none', cursor: 'pointer', borderRadius: '4px', fontWeight: 'bold' }}>
+                        VOLTAR AO LOBBY
+                    </button>
+                </div>
+            )}
+
             <canvas ref={canvasRef} />
 
             <VoiceChat roomId={roomId} userId={user?.id} playerName={playerName} minimal={true} />
@@ -493,29 +659,44 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             )}
 
             <div style={{ position: 'fixed', top: 20, left: 20, pointerEvents: 'none', zIndex: 10 }}>
-                <div style={{ background: 'rgba(0,0,0,0.6)', padding: '15px', border: '3px solid #ffd700', borderRadius: '4px', minWidth: '240px' }}>
-                    <div style={{ fontSize: '1.8rem', color: '#ffd700', marginBottom: '8px' }}>LV {uiStats.level} {playerName} ({getChamp(championId).name})</div>
+                <div style={{ background: 'rgba(0,0,0,0.6)', padding: '12px', border: '3px solid #ffd700', borderRadius: '4px', minWidth: '200px' }}>
+                    <div style={{ fontSize: '1.4rem', color: '#ffd700', marginBottom: '8px', borderBottom: '1px solid rgba(255,215,0,0.3)', paddingBottom: '4px' }}>
+                        {getChamp(championId).name.toUpperCase()} - LV {uiStats.level}
+                    </div>
 
                     {/* HP BAR */}
-                    <div style={{ width: '100%', height: '24px', background: '#333', border: '2px solid #000', position: 'relative' }}>
-                        <div style={{ width: `${(uiStats.hp / uiStats.maxHp) * 100}%`, height: '100%', background: '#ef4444', transition: 'width 0.2s' }} />
-                        <span style={{ position: 'absolute', inset: 0, textAlign: 'center', fontSize: '1rem', color: '#fff', textShadow: '1px 1px #000' }}>HP: {Math.ceil(uiStats.hp)}/{uiStats.maxHp}</span>
+                    <div style={{ width: '100%', height: '22px', background: '#333', border: '2px solid #000', position: 'relative' }}>
+                        <div style={{ width: `${(uiStats.hp / (uiStats.maxHp || statsRef.current.maxHp || 100)) * 100}%`, height: '100%', background: '#ef4444', transition: 'width 0.2s' }} />
+                        <span style={{ position: 'absolute', inset: 0, textAlign: 'center', fontSize: '1rem', color: '#fff', textShadow: '2px 2px #000', lineHeight: '20px', fontWeight: 'bold' }}>
+                            ❤️ {Math.ceil(uiStats.hp)} / {uiStats.maxHp || statsRef.current.maxHp || 120}
+                        </span>
                     </div>
 
                     {/* MANA BAR */}
-                    <div style={{ width: '100%', height: '18px', background: '#333', border: '2px solid #000', marginTop: '4px', position: 'relative' }}>
-                        <div style={{ width: `${(uiStats.mana / uiStats.maxMana) * 100}%`, height: '100%', background: '#3b82f6', transition: 'width 0.2s' }} />
-                        <span style={{ position: 'absolute', inset: 0, textAlign: 'center', fontSize: '0.9rem', color: '#fff', textShadow: '1px 1px #000' }}>MANA: {Math.ceil(uiStats.mana)}/{uiStats.maxMana}</span>
+                    <div style={{ width: '100%', height: '18px', background: '#333', border: '2px solid #000', marginTop: '6px', position: 'relative' }}>
+                        <div style={{ width: `${(uiStats.mana / (uiStats.maxMana || statsRef.current.maxMana || 100)) * 100}%`, height: '100%', background: '#3b82f6', transition: 'width 0.2s' }} />
+                        <span style={{ position: 'absolute', inset: 0, textAlign: 'center', fontSize: '0.9rem', color: '#fff', textShadow: '1px 1px #000', lineHeight: '16px', fontWeight: 'bold' }}>
+                            💧 {Math.ceil(uiStats.mana)} / {uiStats.maxMana || statsRef.current.maxMana || 120}
+                        </span>
+                    </div>
+
+                    {/* STAMINA BAR */}
+                    <div style={{ width: '100%', height: '14px', background: '#333', border: '2px solid #000', marginTop: '6px', position: 'relative' }}>
+                        <div style={{ width: `${(uiStats.stamina / uiStats.maxStamina) * 100}%`, height: '100%', background: '#f59e0b', transition: 'width 0.2s' }} />
+                        <span style={{ position: 'absolute', inset: 0, textAlign: 'center', fontSize: '0.7rem', color: '#fff', textShadow: '1px 1px #000', lineHeight: '12px', fontWeight: 'bold' }}>
+                            ⚡ STAMINA: {Math.ceil(uiStats.stamina)}%
+                        </span>
                     </div>
 
                     {/* STATS */}
-                    <div style={{ display: 'flex', gap: '15px', marginTop: '8px', fontSize: '1.2rem', color: '#ffd700' }}>
-                        <span>⚔️ ATK: {uiStats.atk}</span>
-                        <span>💀 KILLS: {uiStats.kills}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '1rem', color: '#ffd700', opacity: 0.9 }}>
+                        <span>⚔️ {uiStats.atk}</span>
+                        <span>💀 {uiStats.kills}</span>
+                        <span>👤 {playerName}</span>
                     </div>
 
                     {/* SKILLS HUD */}
-                    <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+                    <div style={{ marginTop: '10px', display: 'flex', gap: '6px' }}>
                         {[1, 2].map(idx => {
                             const champ = getChamp(championId);
                             const skill = idx === 2 ? (champ.skill2 || { name: '-', cost: 0, cd: 0 }) : champ.skill;
@@ -526,8 +707,8 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                             const onCd = statsRef.current[skillKey] && now - statsRef.current[skillKey] < skill.cd;
 
                             return (
-                                <div key={idx} style={{ flex: 1, background: 'rgba(0,0,0,0.4)', padding: '5px', border: onCd ? '1px solid #ef4444' : '1px solid #ffd700', borderRadius: '4px', opacity: onCd ? 0.6 : 1 }}>
-                                    <div style={{ fontSize: '0.8rem', color: onCd ? '#ef4444' : '#ffd700', whiteSpace: 'nowrap' }}>[{keyName}] {skill.name.toUpperCase()}</div>
+                                <div key={idx} style={{ flex: 1, background: 'rgba(0,0,0,0.4)', padding: '4px', border: onCd ? '1px solid #ef4444' : '1px solid #ffd700', borderRadius: '4px', opacity: onCd ? 0.6 : 1, textAlign: 'center' }}>
+                                    <div style={{ fontSize: '0.7rem', color: onCd ? '#ef4444' : '#ffd700', overflow: 'hidden', textOverflow: 'ellipsis' }}>[{keyName}] {skill.name}</div>
                                     <div style={{ fontSize: '0.6rem', color: '#aaa' }}>{skill.cost} MP</div>
                                 </div>
                             );
@@ -654,6 +835,30 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                                     setSettings(ns); localStorage.setItem('gameSettings', JSON.stringify(ns));
                                 }} style={{ padding: '8px 16px', background: '#3b82f6', border: 'none', color: '#fff', fontFamily: 'VT323', fontSize: '1.2rem', cursor: 'pointer' }}>{settings.controlMode === 'wasd' ? 'WASD' : 'SETAS'}</button>
                             </div>
+
+                            {/* ADMIN CHEATS */}
+                            {playerName === 'admin' && (
+                                <div style={{ marginTop: '20px', borderTop: '2px solid #555', paddingTop: '15px' }}>
+                                    <h3 style={{ color: '#ffd700', fontSize: '1rem', marginBottom: '10px' }}>PAINEL ADMIN</h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        {[
+                                            { label: 'Vida Infinita', key: 'godMode' },
+                                            { label: 'Stamina Infinita', key: 'infStamina' },
+                                            { label: 'Super Velocidade', key: 'superSpeed' }
+                                        ].map(cheat => (
+                                            <div key={cheat.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
+                                                <span style={{ fontSize: '0.9rem' }}>{cheat.label}</span>
+                                                <button onClick={() => {
+                                                    const ns = { ...settings, [cheat.key]: !settings[cheat.key] };
+                                                    setSettings(ns); localStorage.setItem('gameSettings', JSON.stringify(ns));
+                                                }} style={{ padding: '4px 10px', background: settings[cheat.key] ? '#16a34a' : '#555', border: 'none', color: '#fff', fontFamily: 'VT323', fontSize: '1rem', cursor: 'pointer' }}>
+                                                    {settings[cheat.key] ? 'ATIVO' : 'OFF'}
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <button onClick={() => setShowSettings(false)} style={{ background: '#ffd700', color: '#000', padding: '10px 40px', fontSize: '1.2rem', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>FECHAR</button>
                         {settings.musicEnabled && <div style={{ display: 'none' }}><MusicPlayer /></div>}

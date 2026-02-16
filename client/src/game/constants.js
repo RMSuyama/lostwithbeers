@@ -16,7 +16,29 @@ export const POSITIONS = {
     BASE: { x: 50 * TILE_SIZE, y: 92 * TILE_SIZE },
     SPAWN_L: { x: 15 * TILE_SIZE, y: 10 * TILE_SIZE },
     SPAWN_R: { x: 85 * TILE_SIZE, y: 10 * TILE_SIZE },
-    HUB: { x: 50 * TILE_SIZE, y: 60 * TILE_SIZE }
+    HUB: { x: 50 * TILE_SIZE, y: 60 * TILE_SIZE },
+    INTERSECTIONS: {
+        TOP_LEFT: { x: 25 * TILE_SIZE, y: 40 * TILE_SIZE },
+        TOP_RIGHT: { x: 75 * TILE_SIZE, y: 40 * TILE_SIZE },
+        JUNGLE: { x: 50 * TILE_SIZE, y: 50 * TILE_SIZE },
+        BASE: { x: 50 * TILE_SIZE, y: 92 * TILE_SIZE }
+    },
+    LANES: {
+        LEFT: [
+            { x: 15 * TILE_SIZE, y: 25 * TILE_SIZE },
+            { x: 25 * TILE_SIZE, y: 40 * TILE_SIZE },
+            { x: 15 * TILE_SIZE, y: 60 * TILE_SIZE },
+            { x: 30 * TILE_SIZE, y: 80 * TILE_SIZE },
+            { x: 50 * TILE_SIZE, y: 92 * TILE_SIZE }
+        ],
+        RIGHT: [
+            { x: 85 * TILE_SIZE, y: 25 * TILE_SIZE },
+            { x: 75 * TILE_SIZE, y: 40 * TILE_SIZE },
+            { x: 85 * TILE_SIZE, y: 60 * TILE_SIZE },
+            { x: 70 * TILE_SIZE, y: 80 * TILE_SIZE },
+            { x: 50 * TILE_SIZE, y: 92 * TILE_SIZE }
+        ]
+    }
 };
 
 export const COLORS = {
