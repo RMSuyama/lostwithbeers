@@ -27,18 +27,15 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
             config: { presence: { key: user?.id || playerName } }
         });
 
-        // Track if we are navigating away from the room path
-        const isLeavingRoomPath = () => {
-            const currentPath = window.location.pathname;
-            return !currentPath.includes(`/room/${roomId}`) && !currentPath.includes(`/game/${roomId}`);
-        };
-
         const cleanupPlayer = async () => {
             // ONLY cleanup if we are NOT transitioning to the game AND we are actually leaving the room routes
             if (!isTransitioning.current && user?.id) {
-                // If it's an unmount, we check if the path changed to something outside the game/room
-                if (isLeavingRoomPath()) {
-                    console.log('[ActiveRoom] Actual exit detected, cleaning up player...');
+                const currentPath = window.location.pathname;
+                // Use a more robust check for path
+                const stillInRoom = currentPath.includes(roomId);
+
+                if (!stillInRoom) {
+                    console.log('[ActiveRoom] Cleanup: User left room path:', currentPath);
                     await supabase.from('players').delete().eq('room_id', roomId).eq('user_id', user.id);
                 }
             }
@@ -46,9 +43,9 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
 
         // Tab close/External navigation (Only for hard escapes)
         const handleBeforeUnload = (e) => {
-            if (!isTransitioning.current) {
-                // We use a simpler sync-like call or just fire and forget
-                supabase.from('players').delete().eq('room_id', roomId).eq('user_id', user?.id);
+            if (!isTransitioning.current && user?.id) {
+                // Fire and forget deletion
+                supabase.from('players').delete().eq('room_id', roomId).eq('user_id', user.id);
             }
         };
 
@@ -85,8 +82,11 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
                 // Sync presence? Not strictly needed if we use it for cleanup
             })
             .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+                // We'll let the presence leave handle other players, 
+                // but we should be careful not to trigger it for ourselves during re-renders
                 leftPresences.forEach(async (p) => {
-                    if (p.user_id) {
+                    if (p.user_id && p.user_id !== user?.id) {
+                        console.log('[ActiveRoom] Presence leave detected for:', p.user_id);
                         await supabase.from('players').delete().eq('room_id', roomId).eq('user_id', p.user_id);
                         const { data: remaining } = await supabase.from('players').select('id').eq('room_id', roomId);
                         if (!remaining || remaining.length === 0) {
@@ -104,7 +104,8 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
             supabase.removeChannel(channel);
-            cleanupPlayer(); // This will now check isLeavingRoomPath()
+            // Delay cleanup slightly to avoid Strict Mode double-kill
+            setTimeout(cleanupPlayer, 100);
         };
     }, [roomId, user?.id]);
 

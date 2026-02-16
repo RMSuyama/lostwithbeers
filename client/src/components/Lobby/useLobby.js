@@ -83,19 +83,20 @@ export const useLobby = (user, playerName) => {
     };
 
     const checkAlreadyInRoom = async () => {
+        // Simplified query to avoid 406 Not Acceptable error with joins if relationship is not clear
         const { data: activePlayer } = await supabase
             .from('players')
-            .select('room_id, rooms(name)')
+            .select('room_id')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
 
-        if (activePlayer) {
-            const force = await showConfirm(`Herói, você já tem uma sessão ativa no reino "${activePlayer.rooms?.name || 'desconhecido'}". Deseja encerrar a sessão antiga e continuar aqui?`);
-            if (force) {
+        if (activePlayer?.room_id) {
+            const confirmed = await showConfirm(`Você já tem uma sessão ativa em outra sala. Deseja encerrar a sessão antiga e continuar aqui?`);
+            if (confirmed) {
                 await supabase.from('players').delete().eq('user_id', user.id);
-                return false; // Liberado para seguir
+                return false;
             }
-            return true; // Bloqueado por escolha do usuário
+            return true;
         }
         return false;
     };
