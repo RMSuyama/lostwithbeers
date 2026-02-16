@@ -22,28 +22,37 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
         fetchRoom();
         fetchPlayers();
 
-        // Cleanup function to remove player from database
-        const cleanupPlayer = async () => {
-            if (!isTransitioning.current && user?.id) {
-                console.log('Cleaning up player on exit...');
-                await supabase.from('players').delete().eq('room_id', roomId).eq('user_id', user.id);
-            }
-        };
-
-        // Handle tab close or navigation away from site
-        const handleBeforeUnload = (e) => {
-            if (!isTransitioning.current) {
-                cleanupPlayer();
-            }
-        };
-
-        // Add event listener for tab close
-        window.addEventListener('beforeunload', handleBeforeUnload);
-
         // Presence & Real-time Channel
         const channel = supabase.channel(`room:${roomId}`, {
             config: { presence: { key: user?.id || playerName } }
         });
+
+        // Track if we are navigating away from the room path
+        const isLeavingRoomPath = () => {
+            const currentPath = window.location.pathname;
+            return !currentPath.includes(`/room/${roomId}`) && !currentPath.includes(`/game/${roomId}`);
+        };
+
+        const cleanupPlayer = async () => {
+            // ONLY cleanup if we are NOT transitioning to the game AND we are actually leaving the room routes
+            if (!isTransitioning.current && user?.id) {
+                // If it's an unmount, we check if the path changed to something outside the game/room
+                if (isLeavingRoomPath()) {
+                    console.log('[ActiveRoom] Actual exit detected, cleaning up player...');
+                    await supabase.from('players').delete().eq('room_id', roomId).eq('user_id', user.id);
+                }
+            }
+        };
+
+        // Tab close/External navigation (Only for hard escapes)
+        const handleBeforeUnload = (e) => {
+            if (!isTransitioning.current) {
+                // We use a simpler sync-like call or just fire and forget
+                supabase.from('players').delete().eq('room_id', roomId).eq('user_id', user?.id);
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
 
         channel
             .on('postgres_changes', {
@@ -53,7 +62,6 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
                 filter: `room_id=eq.${roomId}`
             }, (payload) => {
                 fetchPlayers();
-                // If I was deleted (Kicked or session ended), leave room
                 if (payload.event === 'DELETE' && payload.old.user_id === user?.id) {
                     leaveRoom();
                 }
@@ -66,29 +74,22 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
             }, (payload) => {
                 setRoom(payload.new);
                 if (payload.new.status === 'playing') {
-                    console.log('Room status changed to playing. Initiating transition with champion:', championIdRef.current);
                     isTransitioning.current = true;
                     setIsLoading(true);
                     setTimeout(() => {
                         setInGame(true, championIdRef.current);
-                    }, 500); // Small delay for visual effect
-                } else {
-                    console.log('Room status changed but not to playing:', payload.new.status);
+                    }, 500);
                 }
             })
             .on('presence', { event: 'sync' }, () => {
                 // Sync presence? Not strictly needed if we use it for cleanup
             })
             .on('presence', { event: 'leave' }, ({ leftPresences }) => {
-                // IMPORTANT: Cleanup ghost players when they DISCONNECT
                 leftPresences.forEach(async (p) => {
                     if (p.user_id) {
                         await supabase.from('players').delete().eq('room_id', roomId).eq('user_id', p.user_id);
-
-                        // Check if room is now empty
                         const { data: remaining } = await supabase.from('players').select('id').eq('room_id', roomId);
                         if (!remaining || remaining.length === 0) {
-                            console.log('Room empty, deleting:', roomId);
                             await supabase.from('rooms').delete().eq('id', roomId);
                         }
                     }
@@ -101,12 +102,9 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
             });
 
         return () => {
-            // Remove event listener
             window.removeEventListener('beforeunload', handleBeforeUnload);
-
             supabase.removeChannel(channel);
-            // ONLY cleanup if we are not moving to the game scene
-            cleanupPlayer();
+            cleanupPlayer(); // This will now check isLeavingRoomPath()
         };
     }, [roomId, user?.id]);
 
