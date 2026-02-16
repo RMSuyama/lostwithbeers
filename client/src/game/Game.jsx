@@ -393,15 +393,20 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         if (now - (lastAttack.current || 0) < (champ.basic.cd || 400)) return;
         lastAttack.current = now;
 
-        // Rhythm Validation
-        const rhythm = rhythmSystem.current.validateInput();
-        const finalDmg = statsRef.current.atk * champ.basic.dmg * (rhythm.multiplier || 1.0);
+        // Rhythm Validation ONLY for J. Charles
+        let finalDmg = statsRef.current.atk * champ.basic.dmg;
+        const isCharles = championId === 'charles' || championId === 'rafarofa';
 
-        if (rhythm.rating === 'perfect') {
-            combatRef.current.spawnDamage(myPos.current.x, myPos.current.y - 40, "PERFECT!", "#ffd700");
-        } else if (rhythm.rating === 'miss') {
-            combatRef.current.spawnDamage(myPos.current.x, myPos.current.y - 40, "MISS...", "#666");
-            return; // Penalty: attack fails
+        if (isCharles) {
+            const rhythm = rhythmSystem.current.validateInput();
+            finalDmg *= (rhythm.multiplier || 1.0);
+
+            if (rhythm.rating === 'perfect') {
+                combatRef.current.spawnDamage(myPos.current.x, myPos.current.y - 40, "PERFECT!", "#ffd700");
+            } else if (rhythm.rating === 'miss') {
+                combatRef.current.spawnDamage(myPos.current.x, myPos.current.y - 40, "MISS...", "#666");
+                return; // Penalty: attack fails for Charles
+            }
         }
 
         const angle = facingAngle.current;
