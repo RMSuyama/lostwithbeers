@@ -85,18 +85,37 @@ const VoiceChat = ({ roomId, userId, playerName, muted = false, minimal = false 
 
     const handleCall = (call) => {
         call.on('stream', (remoteStream) => {
+            console.log('[VOICE] Received remote stream from:', call.peer);
+
             const audio = document.createElement('audio');
             audio.srcObject = remoteStream;
+            audio.autoplay = true;
+            audio.muted = isDeafened;
+
+            // CRITICAL: Append to DOM for browser to play it
+            audio.style.display = 'none';
+            document.body.appendChild(audio);
+
             audio.addEventListener('loadedmetadata', () => {
-                audio.play();
+                console.log('[VOICE] Audio metadata loaded, attempting play...');
+                audio.play()
+                    .then(() => console.log('[VOICE] Audio playing successfully'))
+                    .catch(err => console.error('[VOICE] Audio play failed:', err));
             });
+
             peersRef.current[call.peer] = { call, audio };
             setPeers(prev => ({ ...prev, [call.peer]: call }));
         });
 
         call.on('close', () => {
+            console.log('[VOICE] Call closed with:', call.peer);
             if (peersRef.current[call.peer]) {
-                peersRef.current[call.peer].audio.remove();
+                const { audio } = peersRef.current[call.peer];
+                if (audio && audio.parentNode) {
+                    audio.pause();
+                    audio.srcObject = null;
+                    audio.remove();
+                }
                 delete peersRef.current[call.peer];
                 setPeers(prev => {
                     const newPeers = { ...prev };
