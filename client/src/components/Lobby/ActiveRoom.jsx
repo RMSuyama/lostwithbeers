@@ -22,6 +22,30 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
         fetchRoom();
         fetchPlayers();
 
+        // Cleanup function to remove player from database
+        const cleanupPlayer = async () => {
+            if (!isTransitioning.current && user?.id) {
+                console.log('Cleaning up player on exit...');
+                await supabase.from('players').delete().eq('room_id', roomId).eq('user_id', user.id);
+            }
+        };
+
+        // Handle browser back button and navigation
+        const handleBeforeUnload = (e) => {
+            if (!isTransitioning.current) {
+                cleanupPlayer();
+            }
+        };
+
+        const handlePopState = (e) => {
+            console.log('Browser back button detected, cleaning up...');
+            cleanupPlayer();
+        };
+
+        // Add event listeners for browser navigation
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        window.addEventListener('popstate', handlePopState);
+
         // Presence & Real-time Channel
         const channel = supabase.channel(`room:${roomId}`, {
             config: { presence: { key: user?.id || playerName } }
@@ -83,12 +107,13 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
             });
 
         return () => {
+            // Remove event listeners
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            window.removeEventListener('popstate', handlePopState);
+
             supabase.removeChannel(channel);
             // ONLY cleanup if we are not moving to the game scene
-            if (!isTransitioning.current && user?.id) {
-                console.log('Cleaning up player on exit...');
-                supabase.from('players').delete().eq('room_id', roomId).eq('user_id', user.id);
-            }
+            cleanupPlayer();
         };
     }, [roomId, user?.id]);
 
