@@ -30,21 +30,15 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
             }
         };
 
-        // Handle browser back button and navigation
+        // Handle tab close or navigation away from site
         const handleBeforeUnload = (e) => {
             if (!isTransitioning.current) {
                 cleanupPlayer();
             }
         };
 
-        const handlePopState = (e) => {
-            console.log('Browser back button detected, cleaning up...');
-            cleanupPlayer();
-        };
-
-        // Add event listeners for browser navigation
+        // Add event listener for tab close
         window.addEventListener('beforeunload', handleBeforeUnload);
-        window.addEventListener('popstate', handlePopState);
 
         // Presence & Real-time Channel
         const channel = supabase.channel(`room:${roomId}`, {
@@ -107,9 +101,8 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
             });
 
         return () => {
-            // Remove event listeners
+            // Remove event listener
             window.removeEventListener('beforeunload', handleBeforeUnload);
-            window.removeEventListener('popstate', handlePopState);
 
             supabase.removeChannel(channel);
             // ONLY cleanup if we are not moving to the game scene
