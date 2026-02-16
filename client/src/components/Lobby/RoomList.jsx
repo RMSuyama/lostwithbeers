@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, Sword, Shield } from 'lucide-react';
+import { Users, Sword, Shield, Play, Clock } from 'lucide-react';
 import './Lobby.css';
 
 const RoomList = ({ rooms, joinRoom }) => {
@@ -15,25 +15,53 @@ const RoomList = ({ rooms, joinRoom }) => {
 
     return (
         <div className="room-grid">
-            {rooms.map((room) => (
-                <div key={room.id} className="room-card">
-                    <div className="room-info">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '4px' }}>
-                            <Shield size={24} style={{ color: '#4caf50' }} />
-                            <h3>{room.name}</h3>
+            {rooms.map((room) => {
+                const isInProgress = room.status === 'in_progress';
+                const playerCount = room.player_count || 0;
+
+                return (
+                    <div key={room.id} className="room-card" style={{ opacity: isInProgress ? 0.7 : 1 }}>
+                        <div className="room-info">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '4px' }}>
+                                <Shield size={24} style={{ color: isInProgress ? '#ff9800' : '#4caf50' }} />
+                                <h3>{room.name}</h3>
+                                {isInProgress && (
+                                    <span style={{
+                                        fontSize: '1rem',
+                                        color: '#ff9800',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        marginLeft: 'auto'
+                                    }}>
+                                        <Play size={14} /> EM JOGO
+                                    </span>
+                                )}
+                            </div>
+                            <p style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem', color: '#8a8a8a' }}>
+                                <Users size={16} /> {playerCount} / 5 HERÓIS
+                            </p>
                         </div>
-                        <p style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.2rem', color: '#8a8a8a' }}>
-                            <Users size={16} /> {room.player_count || 0} / {room.max_players || 10} HERÓIS
-                        </p>
+                        <button
+                            onClick={() => joinRoom(room.id)}
+                            className="btn-primary"
+                            disabled={isInProgress}
+                            style={{
+                                opacity: isInProgress ? 0.5 : 1,
+                                cursor: isInProgress ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            {isInProgress ? (
+                                <>
+                                    <Clock size={16} /> AGUARDAR
+                                </>
+                            ) : (
+                                'INICIAR JORNADA'
+                            )}
+                        </button>
                     </div>
-                    <button
-                        onClick={() => joinRoom(room.id)}
-                        className="btn-primary"
-                    >
-                        INICIAR JORNADA
-                    </button>
-                </div>
-            ))}
+                );
+            })}
         </div>
     );
 };

@@ -55,12 +55,22 @@ export const useLobby = (user, playerName) => {
         try {
             const { data, error } = await supabase
                 .from('rooms')
-                .select('*')
+                .select(`
+                    *,
+                    player_count:players(count)
+                `)
                 .neq('status', 'finished')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            setRooms(data || []);
+
+            // Transform player_count from array to number
+            const roomsWithCount = (data || []).map(room => ({
+                ...room,
+                player_count: room.player_count?.[0]?.count || 0
+            }));
+
+            setRooms(roomsWithCount);
         } catch (err) {
             console.error('Error fetching rooms:', err.message);
         } finally {
@@ -128,6 +138,22 @@ export const useLobby = (user, playerName) => {
         localStorage.setItem('playerName', playerName);
 
         try {
+            // Check if room exists and is joinable
+            const { data: roomData, error: roomError } = await supabase
+                .from('rooms')
+                .select('status')
+                .eq('id', roomId)
+                .single();
+
+            if (roomError || !roomData) {
+                return showAlert('Esta sala não existe mais!');
+            }
+
+            // Prevent joining if game is in progress
+            if (!isHost && roomData.status === 'in_progress') {
+                return showAlert('Esta partida já começou! Aguarde a próxima rodada.');
+            }
+
             const { count } = await supabase
                 .from('players')
                 .select('*', { count: 'exact', head: true })
