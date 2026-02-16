@@ -115,6 +115,12 @@ export const CHAMPIONS = {
         basic: { range: 300, arc: 0.5, dmg: 1, ranged: true, proj: { type: 'curve', curve: 2.2 } },
         skill: { name: 'Pirotecnia', cost: 20, cd: 5000 },
         skill2: { name: 'Explosão Curvilínea', cost: 30, cd: 8000 }
+    },
+    espirro: {
+        name: 'Espirro', color: '#dc2626', hp: 130, mana: 70,
+        basic: { range: 95, arc: 1.5, dmg: 1.1, kb: 35 },
+        skill: { name: 'Chute Giratório', cost: 18, cd: 4500 },
+        skill2: { name: 'Tornado Kick', cost: 25, cd: 7000 }
     }
 };
 
