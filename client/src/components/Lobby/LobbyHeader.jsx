@@ -33,6 +33,9 @@ const LobbyHeader = ({
         } else {
             const confirmed = await showConfirm('Deseja sair da sala?');
             if (!confirmed) return;
+
+            // Delete only this player's record
+            await supabase.from('players').delete().eq('room_id', roomId).eq('user_id', user?.id);
         }
 
         onLeave?.();
