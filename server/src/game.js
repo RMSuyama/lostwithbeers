@@ -126,9 +126,10 @@ class GameState {
         }
     }
 
-    addPlayer(socketId) {
+    addPlayer(socketId, userId) {
         this.players[socketId] = {
             id: socketId,
+            userId: userId, // Store userId for Supabase cleanup
             x: 100, y: 100,
             hp: 100,
             maxHp: 100,

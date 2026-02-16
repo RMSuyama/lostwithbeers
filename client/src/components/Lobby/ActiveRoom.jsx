@@ -82,14 +82,15 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
                 // Sync presence? Not strictly needed if we use it for cleanup
             })
             .on('presence', { event: 'leave' }, ({ leftPresences }) => {
-                // We'll let the presence leave handle other players, 
-                // but we should be careful not to trigger it for ourselves during re-renders
+                // When someone else leaves according to Presence, we clean up their DB record
                 leftPresences.forEach(async (p) => {
                     if (p.user_id && p.user_id !== user?.id) {
                         console.log('[ActiveRoom] Presence leave detected for:', p.user_id);
                         await supabase.from('players').delete().eq('room_id', roomId).eq('user_id', p.user_id);
-                        const { data: remaining } = await supabase.from('players').select('id').eq('room_id', roomId);
-                        if (!remaining || remaining.length === 0) {
+
+                        // Check if room is empty
+                        const { count } = await supabase.from('players').select('*', { count: 'exact', head: true }).eq('room_id', roomId);
+                        if (count === 0) {
                             await supabase.from('rooms').delete().eq('id', roomId);
                         }
                     }
@@ -105,7 +106,7 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
             supabase.removeChannel(channel);
             // Delay cleanup slightly to avoid Strict Mode double-kill
-            setTimeout(cleanupPlayer, 100);
+            setTimeout(cleanupPlayer, 200);
         };
     }, [roomId, user?.id]);
 

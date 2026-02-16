@@ -21,7 +21,7 @@ class RoomManager {
         return roomId;
     }
 
-    async joinRoom(socket, roomId) {
+    async joinRoom(socket, roomId, userId) {
         // Validate room status in Supabase
         const { data: roomData, error: roomError } = await supabase
             .from('rooms')
@@ -41,22 +41,33 @@ class RoomManager {
 
         if (this.rooms[roomId]) {
             socket.join(roomId);
-            this.rooms[roomId].gameState.addPlayer(socket.id);
+            // Associate socket.id with userId for cleanup
+            this.rooms[roomId].gameState.addPlayer(socket.id, userId);
 
             // Notify client
             socket.emit('room_joined', { roomId, playerId: socket.id });
 
-            console.log(`Socket ${socket.id} joined room ${roomId}`);
+            console.log(`Socket ${socket.id} (User: ${userId}) joined room ${roomId}`);
         } else {
             socket.emit('error', 'Room not found');
         }
     }
 
-    handleDisconnect(socket) {
+    async handleDisconnect(socket) {
         for (const roomId in this.rooms) {
             const room = this.rooms[roomId];
-            if (room.gameState.players[socket.id]) {
+            const player = room.gameState.players[socket.id];
+
+            if (player) {
+                const userId = player.userId;
                 room.gameState.removePlayer(socket.id);
+
+                // Server-side cleanup of Supabase
+                if (userId) {
+                    console.log(`[RoomManager] Cleaning up player ${userId} from Supabase on disconnect`);
+                    await supabase.from('players').delete().eq('room_id', roomId).eq('user_id', userId);
+                }
+
                 if (Object.keys(room.gameState.players).length === 0) {
                     this.closeRoom(roomId);
                 }

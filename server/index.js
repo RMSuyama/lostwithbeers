@@ -23,13 +23,16 @@ const roomManager = new RoomManager(io);
 io.on('connection', (socket) => {
     console.log(`User connected: ${socket.id}`);
 
-    socket.on('create_room', () => {
+    socket.on('create_room', (data) => {
+        const userId = typeof data === 'object' ? data.userId : null;
         const roomId = roomManager.createRoom();
-        roomManager.joinRoom(socket, roomId);
+        roomManager.joinRoom(socket, roomId, userId);
     });
 
-    socket.on('join_room', (roomId) => {
-        roomManager.joinRoom(socket, roomId);
+    socket.on('join_room', (data) => {
+        const roomId = typeof data === 'object' ? data.roomId : data;
+        const userId = typeof data === 'object' ? data.userId : null;
+        roomManager.joinRoom(socket, roomId, userId);
     });
 
     socket.on('player_input', (data) => {

@@ -55,19 +55,19 @@ export const useLobby = (user, playerName) => {
         try {
             const { data, error } = await supabase
                 .from('rooms')
-                .select(`
-                    *,
-                    player_count:players(count)
-                `)
+                .select('*')
                 .neq('status', 'finished')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
 
-            // Transform player_count from array to number
-            const roomsWithCount = (data || []).map(room => ({
-                ...room,
-                player_count: room.player_count?.[0]?.count || 0
+            // Fetch player counts separately to avoid complex joins if they cause 406 errors
+            const roomsWithCount = await Promise.all((data || []).map(async (room) => {
+                const { count } = await supabase
+                    .from('players')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('room_id', room.id);
+                return { ...room, player_count: count || 0 };
             }));
 
             setRooms(roomsWithCount);
