@@ -3,11 +3,11 @@ const { v4: uuidv4 } = require('uuid');
 
 // Standard MOBA/TD Mob Types
 const MOB_TYPES = {
-    scout: { baseHp: 600, baseSpeed: 150, baseDamage: 50, gold: 10, size: 20, aggroRange: 400, attackRange: 40, attackCooldown: 1.5, color: 0xff8c00, emoji: '🏴' },
-    warrior: { baseHp: 1600, baseSpeed: 100, baseDamage: 100, gold: 20, size: 30, aggroRange: 300, attackRange: 45, attackCooldown: 1.0, color: 0xff0000, emoji: '⚔️' },
-    brute: { baseHp: 4000, baseSpeed: 60, baseDamage: 150, gold: 40, size: 50, aggroRange: 200, attackRange: 60, attackCooldown: 2.0, color: 0x9932cc, emoji: '💪' },
-    ghost: { baseHp: 1000, baseSpeed: 200, baseDamage: 80, gold: 30, size: 25, aggroRange: 500, attackRange: 35, attackCooldown: 0.8, color: 0x00ff00, emoji: '👻' },
-    boss: { baseHp: 10000, baseSpeed: 80, baseDamage: 300, gold: 100, size: 70, aggroRange: 600, attackRange: 80, attackCooldown: 1.5, color: 0xffd700, emoji: '👑' }
+    scout: { baseHp: 600, baseSpeed: 150, baseDamage: 8, gold: 10, size: 20, aggroRange: 400, attackRange: 40, attackCooldown: 1.5, color: 0xff8c00, emoji: '🏴' },
+    warrior: { baseHp: 1600, baseSpeed: 100, baseDamage: 15, gold: 20, size: 30, aggroRange: 300, attackRange: 45, attackCooldown: 1.0, color: 0xff0000, emoji: '⚔️' },
+    brute: { baseHp: 4000, baseSpeed: 60, baseDamage: 25, gold: 40, size: 50, aggroRange: 200, attackRange: 60, attackCooldown: 2.0, color: 0x9932cc, emoji: '💪' },
+    ghost: { baseHp: 1000, baseSpeed: 200, baseDamage: 12, gold: 30, size: 25, aggroRange: 500, attackRange: 35, attackCooldown: 0.8, color: 0x00ff00, emoji: '👻' },
+    boss: { baseHp: 10000, baseSpeed: 80, baseDamage: 40, gold: 100, size: 70, aggroRange: 600, attackRange: 80, attackCooldown: 1.5, color: 0xffd700, emoji: '👑' }
 };
 
 const POSITIONS = {
