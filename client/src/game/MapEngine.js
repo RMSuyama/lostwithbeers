@@ -570,12 +570,49 @@ export class MapRenderer {
         // Base Logic Box (Only for Standard Mode)
         if (this.mapType !== 'boss_rush') {
             const bx = 50 * TILE_SIZE + offsetX; const by = 92 * TILE_SIZE + offsetY;
-            ctx.fillStyle = '#0b1a0b'; // Dark Green
-            ctx.fillRect(bx - 40, by - 40, 80, 80);
-            ctx.strokeStyle = '#ffd700'; // Gold
-            ctx.lineWidth = 4; ctx.strokeRect(bx - 40, by - 40, 80, 80);
-            ctx.fillStyle = '#ffd700'; ctx.font = '20px "VT323"'; ctx.textAlign = 'center';
-            ctx.fillText("BASE REBELDE", bx, by - 50);
+
+            // Draw Refrigerator (Geladeira)
+            const time = Date.now() * 0.002;
+            const floatY = Math.sin(time) * 3;
+
+            // Refrigerator Body
+            ctx.shadowColor = '#000';
+            ctx.shadowBlur = 10;
+
+            // Main Body (White/Light Grey)
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(bx - 30, by - 60 + floatY, 60, 100);
+
+            // Outline
+            ctx.strokeStyle = '#9ca3af';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(bx - 30, by - 60 + floatY, 60, 100);
+
+            // Freezer Line (Top Section)
+            ctx.beginPath();
+            ctx.moveTo(bx - 30, by - 30 + floatY);
+            ctx.lineTo(bx + 30, by - 30 + floatY);
+            ctx.stroke();
+
+            // Handles (Grey)
+            ctx.fillStyle = '#d1d5db';
+            // Freezer Handle
+            ctx.fillRect(bx - 25, by - 50 + floatY, 8, 15);
+            ctx.strokeRect(bx - 25, by - 50 + floatY, 8, 15);
+            // Main Door Handle
+            ctx.fillRect(bx - 25, by - 20 + floatY, 8, 15);
+            ctx.strokeRect(bx - 25, by - 20 + floatY, 8, 15);
+
+            // Cool Frost Effect (Blue Glow at Bottom)
+            ctx.shadowColor = '#3b82f6';
+            ctx.shadowBlur = 15 + Math.sin(time * 2) * 5;
+            ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
+            ctx.fillRect(bx - 32, by + 35 + floatY, 64, 5);
+            ctx.shadowBlur = 0;
+
+            // Label
+            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 24px "VT323"'; ctx.textAlign = 'center';
+            ctx.fillText("A GELADEIRA", bx, by - 70 + floatY);
         }
     }
 }

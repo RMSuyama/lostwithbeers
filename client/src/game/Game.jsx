@@ -39,6 +39,16 @@ const Game = ({ roomId, playerName, championId, initialGameMode, user, setInGame
     const [waveUi, setWaveUi] = useState({ current: 0, timer: 60, total: 0, dead: 0, baseHp: 1000 });
     const [showEscMenu, setShowEscMenu] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth <= 768 || navigator.maxTouchPoints > 0);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
     const [showScoreboard, setShowScoreboard] = useState(false);
     const [gameState, setGameState] = useState('starting');
     const [settings, setSettings] = useState(() => {
@@ -273,8 +283,11 @@ const Game = ({ roomId, playerName, championId, initialGameMode, user, setInGame
             window.removeEventListener('keydown', handleKeyActions);
             cancelAnimationFrame(animationFrame);
             if (networkRef.current) networkRef.current.cleanup();
-            socket?.off('game_state');
-            socket?.off('room_joined');
+            if (socket) {
+                socket.off('game_state');
+                socket.off('room_joined');
+                socket.off('player_joined'); // Ensure all are removed
+            }
         };
     }, []);
 
@@ -759,7 +772,7 @@ const Game = ({ roomId, playerName, championId, initialGameMode, user, setInGame
 
                     {/* HP BAR */}
                     <div style={{ width: '100%', height: '22px', background: '#333', border: '2px solid #000', position: 'relative' }}>
-                        <div style={{ width: `${(uiStats.hp / (uiStats.maxHp || statsRef.current.maxHp || 100)) * 100}%`, height: '100%', background: '#ef4444', transition: 'width 0.2s' }} />
+                        <div style={{ width: `${Math.min(100, (uiStats.hp / (uiStats.maxHp || statsRef.current.maxHp || 100)) * 100)}%`, height: '100%', background: '#ef4444', transition: 'width 0.2s' }} />
                         <span style={{ position: 'absolute', inset: 0, textAlign: 'center', fontSize: '1rem', color: '#fff', textShadow: '2px 2px #000', lineHeight: '20px', fontWeight: 'bold' }}>
                             ❤️ {Math.ceil(uiStats.hp)} / {uiStats.maxHp || statsRef.current.maxHp || 120}
                         </span>
@@ -767,7 +780,8 @@ const Game = ({ roomId, playerName, championId, initialGameMode, user, setInGame
 
                     {/* MANA BAR */}
                     <div style={{ width: '100%', height: '18px', background: '#333', border: '2px solid #000', marginTop: '6px', position: 'relative' }}>
-                        <div style={{ width: `${(uiStats.mana / (uiStats.maxMana || statsRef.current.maxMana || 100)) * 100}%`, height: '100%', background: '#3b82f6', transition: 'width 0.2s' }} />
+                        {/* Fix: Clamp width to 100% to avoid overflow if current mana > max mana temporarily */}
+                        <div style={{ width: `${Math.min(100, (uiStats.mana / (uiStats.maxMana || statsRef.current.maxMana || 100)) * 100)}%`, height: '100%', background: '#3b82f6', transition: 'width 0.2s' }} />
                         <span style={{ position: 'absolute', inset: 0, textAlign: 'center', fontSize: '0.9rem', color: '#fff', textShadow: '1px 1px #000', lineHeight: '16px', fontWeight: 'bold' }}>
                             💧 {Math.ceil(uiStats.mana)} / {uiStats.maxMana || statsRef.current.maxMana || 120}
                         </span>
@@ -975,6 +989,18 @@ const Game = ({ roomId, playerName, championId, initialGameMode, user, setInGame
                     </div>
                 )
             }
+
+            {/* Mobile Controls Overlay */}
+            {isMobile && gameStateRef.current === 'playing' && (
+                <MobileControls
+                    onInput={(joystick) => {
+                        if (controlsSystem.current) controlsSystem.current.handleJoystick(joystick);
+                    }}
+                    onAction={(action) => {
+                        if (controlsSystem.current) controlsSystem.current.handleAction(action);
+                    }}
+                />
+            )}
 
             {
                 showEscMenu && (

@@ -4,10 +4,13 @@ body {
     width: 100vw;
     height: 100vh;
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: hidden; /* Prevent vertical scroll during game */
     background-color: #000;
     color: rgba(255, 255, 255, 0.87);
     font-family: 'VT323', monospace;
+    touch-action: none; /* Prevent browser zoom/scroll */
+    overscroll-behavior: none; /* Prevent pull-to-refresh */
+    user-select: none;
 }
 
 #root {
