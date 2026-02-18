@@ -44,6 +44,7 @@ class GameState {
             maxMana: 100,
             stamina: 100,
             maxStamina: 100,
+            gold: 0,
             input: { vector: { x: 0, y: 0 }, actions: {} },
             effects: [],
             cooldowns: {},
@@ -217,16 +218,16 @@ class GameState {
     onProjectileHit(proj, enemy, projIndex) {
         enemy.hp -= proj.damage;
         if (enemy.hp <= 0) {
-            this.killEnemy(enemy);
+            this.killEnemy(enemy, proj.ownerId);
         }
         this.projectiles.splice(projIndex, 1);
     }
 
-    killEnemy(enemy) {
+    killEnemy(enemy, killerId) {
         const index = this.enemies.indexOf(enemy);
         if (index > -1) {
             this.enemies.splice(index, 1);
-            this.onEnemyKilled(enemy);
+            this.onEnemyKilled(enemy, killerId);
         }
     }
 

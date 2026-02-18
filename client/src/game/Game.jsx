@@ -880,10 +880,17 @@ const Game = ({ roomId, playerName, championId, initialGameMode, user, setInGame
                         </div>
                     </div>
                 )}
+                const [showSettings, setShowSettings] = useState(false);
+                const [showShop, setShowShop] = useState(false); // Shop State
+                // ...
                 <div style={{ marginTop: '10px', display: 'flex', gap: '10px', justifyContent: 'flex-end', pointerEvents: 'auto' }}>
                     <div style={{ background: 'rgba(0,0,0,0.6)', border: '2px solid #ffd700', color: '#ffd700', padding: '5px 10px', borderRadius: '4px', fontSize: '0.9rem' }}>
                         CONTROLES: {settings.controlMode === 'arrows' ? 'SETAS + QWER' : 'WASD + 1234'}
                     </div>
+                    {/* SHOP BUTON */}
+                    <button onClick={() => setShowShop(true)} style={{ background: 'rgba(0,0,0,0.6)', border: '2px solid #ffd700', color: '#ffd700', padding: '10px', borderRadius: '4px', cursor: 'pointer' }} title="Loja (P)">
+                        <ShoppingBag size={24} />
+                    </button>
                     <button onClick={() => setShowSettings(true)} style={{ background: 'rgba(0,0,0,0.6)', border: '2px solid #ffd700', color: '#ffd700', padding: '10px', borderRadius: '4px', cursor: 'pointer' }}><Settings size={24} /></button>
                 </div>
             </div>
@@ -937,6 +944,19 @@ const Game = ({ roomId, playerName, championId, initialGameMode, user, setInGame
                 <button onClick={toggleFullscreen} style={{ background: 'rgba(0,0,0,0.6)', border: '2px solid #ffd700', color: '#ffd700', padding: '10px 20px', borderRadius: '4px', cursor: 'pointer', pointerEvents: 'auto' }}>FULLSCREEN</button>
             </div>
 
+            {/* Shop UI */}
+            {showShop && (
+                <Shop
+                    gold={Math.floor(uiStats.gold || 0)}
+                    buyUpgrade={(type, cost) => {
+                        if (socket) socket.emit('buy_upgrade', { type, cost });
+                        // Optimistic update could go here, but waiting for server is safer
+                    }}
+                    onClose={() => setShowShop(false)}
+                />
+            )}
+
+            {/* Settings Menu */}
             {
                 showSettings && (
                     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -959,10 +979,10 @@ const Game = ({ roomId, playerName, championId, initialGameMode, user, setInGame
                                     }} style={{ padding: '8px 16px', background: '#3b82f6', border: 'none', color: '#fff', fontFamily: 'VT323', fontSize: '1.2rem', cursor: 'pointer' }}>{settings.controlMode === 'wasd' ? 'WASD' : 'SETAS'}</button>
                                 </div>
 
-                                {/* ADMIN CHEATS */}
-                                {playerName === 'admin' && (
+                                {/* ADMIN/HOST CHEATS */}
+                                {(playerName === 'admin' || amIHost.current) && (
                                     <div style={{ marginTop: '20px', borderTop: '2px solid #555', paddingTop: '15px' }}>
-                                        <h3 style={{ color: '#ffd700', fontSize: '1rem', marginBottom: '10px' }}>PAINEL ADMIN</h3>
+                                        <h3 style={{ color: '#ffd700', fontSize: '1rem', marginBottom: '10px' }}>PAINEL ADMIN / HOST</h3>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                             {[
                                                 { label: 'Vida Infinita', key: 'godMode' },
