@@ -64,8 +64,38 @@ selectMobType(wave) {
 }
 
 // Hooks
-onEnemyKilled(enemy) {
+onEnemyKilled(enemy, killerId) {
     this.wave.deadEnemies++;
+    if (killerId && this.players[killerId]) {
+        const gold = MOB_TYPES[enemy.type]?.gold || 10;
+        this.players[killerId].gold = (this.players[killerId].gold || 0) + gold;
+    }
+}
+
+handleBuyUpgrade(socketId, { type, cost }) {
+    const player = this.players[socketId];
+    if (!player || (player.gold || 0) < cost) return;
+
+    player.gold -= cost;
+
+    switch (type) {
+        case 'dmg':
+            player.atk = (player.atk || 1) * 1.05;
+            break;
+        case 'atk_speed':
+            player.cooldownMultiplier = (player.cooldownMultiplier || 1) * 0.95;
+            break;
+        case 'max_hp':
+            player.maxHp += 20;
+            player.hp += 20;
+            break;
+        case 'regen':
+            player.hpRegen = (player.hpRegen || 0) + 1;
+            break;
+        case 'speed':
+            player.speedMultiplier = (player.speedMultiplier || 1) * 1.05;
+            break;
+    }
 }
 
 onEnemyReachedBase() {

@@ -51,6 +51,10 @@ io.on('connection', (socket) => {
         roomManager.handleWaveControl(socket, data);
     });
 
+    socket.on('buy_upgrade', (data) => {
+        roomManager.handleBuyUpgrade(socket, data);
+    });
+
     socket.on('disconnect', () => {
         roomManager.handleDisconnect(socket);
         console.log(`User disconnected: ${socket.id}`);

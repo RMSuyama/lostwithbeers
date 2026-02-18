@@ -122,6 +122,16 @@ class RoomManager {
         }
     }
 
+    handleBuyUpgrade(socket, data) {
+        const { roomId, type, cost } = data;
+        if (this.rooms[roomId]) {
+            const gs = this.rooms[roomId].gameState;
+            if (gs.handleBuyUpgrade) {
+                gs.handleBuyUpgrade(socket.id, { type, cost });
+            }
+        }
+    }
+
     async startGameLoop(roomId) {
         // Ensure room exists in memory
         // Ensure room exists in memory
