@@ -39,6 +39,7 @@ const Game = ({ roomId, playerName, championId, initialGameMode, user, setInGame
     const [waveUi, setWaveUi] = useState({ current: 0, timer: 60, total: 0, dead: 0, baseHp: 1000 });
     const [showEscMenu, setShowEscMenu] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
+    const [showShop, setShowShop] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
@@ -83,7 +84,8 @@ const Game = ({ roomId, playerName, championId, initialGameMode, user, setInGame
         atk: 1,
         stamina: 100, maxStamina: 100,
         xp: 0, maxXp: 50, level: 1,
-        totalDamage: 0, kills: 0
+        totalDamage: 0, kills: 0,
+        gold: 0
     });
     const baseHpRef = useRef(1000);
 
@@ -199,6 +201,7 @@ const Game = ({ roomId, playerName, championId, initialGameMode, user, setInGame
                                 statsRef.current.maxHp = serverMe.maxHp;
                                 statsRef.current.mana = serverMe.mana;
                                 statsRef.current.stamina = serverMe.stamina;
+                                statsRef.current.gold = serverMe.gold || 0;
                             }
 
                             // Sync Mobs & Wave

@@ -57,7 +57,7 @@ const SKILLS = {
                 vy: target.y * speed,
                 range: 600,
                 traveled: 0,
-                damage: 10,  // Reduced from 20 to balance with increased mob HP
+                damage: 10 * (caster.atk || 1),  // Apply shop damage bonus
                 type: 'fireball'
             });
         }

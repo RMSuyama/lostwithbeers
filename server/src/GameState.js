@@ -333,7 +333,7 @@ class GameState {
     executeSkill(player, skill, targetVector) {
         player.mana -= skill.manaCost;
         player.stamina -= skill.staminaCost;
-        player.cooldowns[skill.id] = skill.cooldown;
+        player.cooldowns[skill.id] = skill.cooldown * (player.cooldownMultiplier || 1);
         skill.onCast(this, player.id, targetVector);
     }
 
