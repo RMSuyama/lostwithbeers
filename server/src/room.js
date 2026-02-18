@@ -145,6 +145,7 @@ class RoomManager {
 
         if (this.rooms[roomId].started) return;
         this.rooms[roomId].started = true;
+        this.rooms[roomId].gameState.state = 'playing'; // START THE LOGIC
 
         // Update room status to playing in Supabase
         await supabase

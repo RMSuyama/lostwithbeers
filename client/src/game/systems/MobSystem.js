@@ -309,10 +309,13 @@ export class MobSystem {
 
     syncFromHost(serverMobs) {
         if (this.isHost) return;
+
         const serverIds = new Set(serverMobs.map(m => m.id));
+        const localMap = new Map();
+        this.mobs.forEach(m => localMap.set(m.id, m));
 
         serverMobs.forEach(sm => {
-            const local = this.mobs.find(m => m.id === sm.id);
+            const local = localMap.get(sm.id);
             if (local) {
                 local.x = sm.x;
                 local.y = sm.y;

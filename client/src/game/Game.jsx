@@ -22,6 +22,7 @@ import { ControlsSystem } from './systems/ControlsSystem';
 import { Sword, Zap, Shield, Play } from 'lucide-react';
 import MobileControls from '../components/MobileControls';
 import VoiceChat from '../components/VoiceChat';
+import Shop from '../components/Shop';
 import { Settings, Maximize, Music, Mic, MicOff, ShoppingBag } from 'lucide-react';
 const MAX_LEVEL = 30;
 
@@ -36,7 +37,7 @@ const Game = ({ roomId, playerName, championId, initialGameMode, user, setInGame
     const [gameMode, setGameMode] = useState(initialGameMode || 'standard');
     const [startTimer, setStartTimer] = useState(5);
     const [uiStats, setUiStats] = useState({ hp: 100, maxHp: 100, mana: 50, maxMana: 50, stamina: 100, maxStamina: 100, level: 1, xp: 0, maxXp: 50 });
-    const [waveUi, setWaveUi] = useState({ current: 0, timer: 60, total: 0, dead: 0, baseHp: 1000 });
+    const [waveUi, setWaveUi] = useState({ current: 1, timer: 15, total: 0, dead: 0, baseHp: 1000 });
     const [showEscMenu, setShowEscMenu] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [showShop, setShowShop] = useState(false);
@@ -368,8 +369,12 @@ const Game = ({ roomId, playerName, championId, initialGameMode, user, setInGame
             combatRef.current.update(dt, mobSystemRef.current.mobs, (x, y, v) => combatRef.current.spawnDamage(x, y, v));
         }
 
-        // Efficient UI updates
-        setUiStats({ ...statsRef.current });
+        // Efficient UI updates (Throttled to ~10Hz to reduce lag)
+        if (!window._uiCounter) window._uiCounter = 0;
+        window._uiCounter++;
+        if (window._uiCounter % 6 === 0) {
+            setUiStats({ ...statsRef.current });
+        }
 
         const myStatuses = mobSystemRef.current?.statusSystem?.effects?.get(playerName) || [];
         const statusObj = {};
@@ -418,8 +423,11 @@ const Game = ({ roomId, playerName, championId, initialGameMode, user, setInGame
         const manaRegen = 2;
         const stamRegen = s.infStamina ? 100 : 15;
 
+        // Apply HP Regen from Shop
+        const finalHpRegen = regenRate + (statsRef.current.hpRegen || 0);
+
         if (statsRef.current.hp < statsRef.current.maxHp) {
-            statsRef.current.hp = Math.min(statsRef.current.maxHp, statsRef.current.hp + regenRate * dt);
+            statsRef.current.hp = Math.min(statsRef.current.maxHp, statsRef.current.hp + finalHpRegen * dt);
         }
         if (statsRef.current.mana < statsRef.current.maxMana) {
             statsRef.current.mana = Math.min(statsRef.current.maxMana, statsRef.current.mana + manaRegen * dt);
@@ -430,6 +438,7 @@ const Game = ({ roomId, playerName, championId, initialGameMode, user, setInGame
 
         if (mobSystemRef.current) {
             const ws = mobSystemRef.current.waveStats;
+            // Update Wave UI only when needed
             if (ws.current !== waveUi.current || ws.deadMobs !== waveUi.dead || ws.totalMobs !== waveUi.total || Math.ceil(ws.timer) !== Math.ceil(waveUi.timer)) {
                 setWaveUi({
                     current: ws.current,
@@ -881,6 +890,28 @@ const Game = ({ roomId, playerName, championId, initialGameMode, user, setInGame
                             <div style={{ width: `${(waveUi.baseHp / 1000) * 100}%`, height: '100%', background: '#22c55e' }} />
                             <span style={{ position: 'absolute', top: -20, left: 0, fontSize: '0.8rem', color: '#22c55e' }}>HP BASE: {waveUi.baseHp}</span>
                         </div>
+
+                        {/* SKIP WAVE BUTTON */}
+                        {!waveUi.active && waveUi.timer > 0 && (
+                            <button
+                                onClick={() => socket?.emit('wave_control', { roomId, type: 'skip_wave' })}
+                                style={{
+                                    marginTop: '15px',
+                                    padding: '8px 15px',
+                                    background: '#ffd700',
+                                    color: '#000',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontFamily: 'VT323',
+                                    fontSize: '1.1rem',
+                                    width: '100%',
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                PULAR ESPERA
+                            </button>
+                        )}
                     </div>
                 )}
 
@@ -950,7 +981,7 @@ const Game = ({ roomId, playerName, championId, initialGameMode, user, setInGame
                 <Shop
                     gold={Math.floor(uiStats.gold || 0)}
                     buyUpgrade={(type, cost) => {
-                        if (socket) socket.emit('buy_upgrade', { type, cost });
+                        if (socket) socket.emit('buy_upgrade', { roomId, type, cost });
                         // Optimistic update could go here, but waiting for server is safer
                     }}
                     onClose={() => setShowShop(false)}
