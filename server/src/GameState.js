@@ -164,7 +164,8 @@ class GameState {
             const dy = target.y - enemy.y;
             const dist = Math.hypot(dx, dy);
 
-            if (dist < 15) {
+            // Increase validation radius to prevent "orbiting" or getting stuck
+            if (dist < 40) {
                 enemy.pathIndex++;
                 if (enemy.pathIndex >= enemy.path.length) {
                     this.damageBase(enemy.damage);
@@ -173,8 +174,16 @@ class GameState {
                     return;
                 }
             } else {
-                enemy.x += (dx / dist) * enemy.speed * dt;
-                enemy.y += (dy / dist) * enemy.speed * dt;
+                // Normalize vector
+                const vx = dx / dist;
+                const vy = dy / dist;
+
+                let moveX = vx * enemy.speed * dt;
+                let moveY = vy * enemy.speed * dt;
+
+                // Simple wall sliding not really needed for lane mobs, but good safety
+                enemy.x += moveX;
+                enemy.y += moveY;
             }
         }
     }
