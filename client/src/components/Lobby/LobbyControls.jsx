@@ -18,7 +18,7 @@ const LobbyControls = ({ me, players, toggleReady, startGame }) => {
                 <div style={{ display: 'flex', gap: '1rem', width: '100%', justifyContent: 'center' }}>
                     <button
                         onClick={startGame}
-                        disabled={players.some(p => !p.is_ready)}
+                        disabled={players.some(p => !p.is_host && !p.is_ready) || !me?.champion_id}
                         className="btn-primary"
                         style={{ flex: 1, maxWidth: '300px' }}
                     >

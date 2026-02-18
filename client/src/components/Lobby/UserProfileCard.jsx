@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Shield, Map } from 'lucide-react';
 
 const UserProfileCard = ({ playerName, setPlayerName, user, createRoom, creating }) => {
+    const [selectedMode, setSelectedMode] = useState('standard');
     return (
         <div className="profile-hero-card">
             <div>
@@ -18,11 +19,23 @@ const UserProfileCard = ({ playerName, setPlayerName, user, createRoom, creating
                         onChange={(e) => setPlayerName(e.target.value)}
                         disabled={true}
                     />
+
+                    <label className="label-technical" style={{ marginTop: '10px' }}>MODO DE JOGO</label>
+                    <select
+                        className="hero-text-input"
+                        value={selectedMode}
+                        onChange={(e) => setSelectedMode(e.target.value)}
+                        style={{ background: '#000', color: '#ffd700', border: '1px solid #ffd700' }}
+                    >
+                        <option value="standard">MOBA Clássico</option>
+                        <option value="boss_rush">Boss Rush (Coliseu)</option>
+                    </select>
+
                     <div style={{ fontSize: '0.8rem', color: '#ffd700', marginTop: '4px', opacity: 0.8, textAlign: 'center' }}>
                         Vinculado a: {user?.email}
                     </div>
                     <button
-                        onClick={createRoom}
+                        onClick={() => createRoom(selectedMode)}
                         disabled={creating}
                         className="hero-btn-primary"
                     >

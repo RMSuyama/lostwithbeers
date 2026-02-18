@@ -23,27 +23,28 @@ import { Sword, Zap, Shield, Play } from 'lucide-react';
 import MobileControls from '../components/MobileControls';
 import VoiceChat from '../components/VoiceChat';
 import { Settings, Maximize, Music, Mic, MicOff } from 'lucide-react';
+const MAX_LEVEL = 30;
 
-const Game = ({ roomId, playerName, championId, user, setInGame }) => {
+const LERP_FACTOR = 0.1;
+
+const Game = ({ roomId, playerName, championId, initialGameMode, user, setInGame, socket }) => {
     const canvasRef = useRef(null);
     const engineRef = useRef(null);
     const minimapCanvasRef = useRef(null);
 
-    // State
-    const [gameState, setGameState] = useState('starting'); // starting, playing, dead, over
+    // --- STATE ---
+    const [gameMode, setGameMode] = useState(initialGameMode || 'standard');
     const [startTimer, setStartTimer] = useState(5);
     const [uiStats, setUiStats] = useState({ hp: 100, maxHp: 100, mana: 50, maxMana: 50, stamina: 100, maxStamina: 100, level: 1, xp: 0, maxXp: 50 });
     const [waveUi, setWaveUi] = useState({ current: 0, timer: 60, total: 0, dead: 0, baseHp: 1000 });
     const [showEscMenu, setShowEscMenu] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [showScoreboard, setShowScoreboard] = useState(false);
+    const [gameState, setGameState] = useState('starting');
     const [settings, setSettings] = useState(() => {
         const savedRaw = localStorage.getItem('gameSettings');
         const saved = savedRaw ? JSON.parse(savedRaw) : { showMyName: true, controlMode: 'wasd', musicEnabled: true };
-
-        // Migrate legacy 'both' mode to 'wasd'
         if (saved.controlMode === 'both') saved.controlMode = 'wasd';
-
         return {
             ...saved,
             godMode: saved.godMode || false,
@@ -52,14 +53,11 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         };
     });
 
-    // Refs (Mutable Game State)
+    // --- REFS ---
     const isHost = useRef(false);
+    const amIHost = useRef(false);
     const gameStateRef = useRef(gameState);
-    useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
-
     const settingsRef = useRef(settings);
-    useEffect(() => { settingsRef.current = settings; }, [settings]);
-
     const playersRef = useRef([]);
     const myPos = useRef({ x: POSITIONS.BASE.x + Math.random() * 50, y: POSITIONS.BASE.y + Math.random() * 50 });
     const facingAngle = useRef(0);
@@ -68,8 +66,6 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const lastTimeRef = useRef(Date.now());
     const walkTimerRef = useRef(0);
     const lastPosRef = useRef({ ...myPos.current });
-
-    // Stats Ref
     const statsRef = useRef({
         ...getChamp(championId),
         maxHp: getChamp(championId).hp,
@@ -86,13 +82,17 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
     const mobSystemRef = useRef(null);
     const combatRef = useRef(null);
     const gameStateObj = useRef(new GameState());
-    const rhythmSystem = useRef(new RhythmSystem(120)); // Assume 120 BPM for now
+    const rhythmSystem = useRef(new RhythmSystem(120));
     const performanceSystem = useRef(new PerformanceSystem());
     const projectileSystem = useRef(new ProjectileSystem(performanceSystem.current));
     const controlsRef = useRef(new ControlsSystem());
     const lastAttack = useRef(0);
 
-    // Countdown
+    // --- SYNC REFS ---
+    useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
+    useEffect(() => { settingsRef.current = settings; }, [settings]);
+
+    // --- COUNTDOWN ---
     useEffect(() => {
         if (gameState === 'starting') {
             const timer = setInterval(() => {
@@ -109,21 +109,24 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         }
     }, [gameState]);
 
-    // MAIN INIT
+    // --- GAME INIT ---
     useEffect(() => {
         console.log(`[GAME] Init Room: ${roomId}`);
 
         const seed = Array.from(roomId).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        engineRef.current = new MapRenderer(canvasRef.current, seed);
+        // Initial Map Init 
+        engineRef.current = new MapRenderer(canvasRef.current, seed, gameMode);
+        console.log(`[GAME] Initializing with mode: ${gameMode}`);
 
         supabase.from('players').select('is_host').eq('room_id', roomId).eq('name', playerName).single()
             .then(({ data }) => {
                 if (data?.is_host) {
                     isHost.current = true;
+                    amIHost.current = true;
                     console.log('[GAME] I am HOST');
                 }
 
-                mobSystemRef.current = new MobSystem(isHost.current, performanceSystem.current);
+                mobSystemRef.current = new MobSystem(isHost.current, performanceSystem.current, gameMode);
                 combatRef.current = new CombatSystem();
 
                 networkRef.current = new NetworkSystem(
@@ -139,8 +142,9 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                             gameStateObj.current.syncFromHost(state);
                             if (mobSystemRef.current) {
                                 mobSystemRef.current.syncFromHost(state.mobs);
-                                mobSystemRef.current.waveStats.current = state.wave;
-                                mobSystemRef.current.waveStats.timer = state.timer || 0;
+                                // Handle both standard wave and boss rush state if we add it
+                                mobSystemRef.current.waveStats.current = state.wave?.current || 0;
+                                mobSystemRef.current.waveStats.timer = state.wave?.timer || 0;
                             }
                             if (projectileSystem.current) {
                                 projectileSystem.current.projectiles = state.projectiles || [];
@@ -150,8 +154,71 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                     }
                 );
                 networkRef.current.connect();
+
+                if (socket) {
+                    socket.emit('join_room', { roomId, userId: user?.id });
+
+                    socket.on('room_joined', (data) => {
+                        if (data.gameMode && data.gameMode !== 'standard') {
+                            console.log(`[GAME] Switching to mode: ${data.gameMode}`);
+                            setGameMode(data.gameMode);
+                            engineRef.current = new MapRenderer(canvasRef.current, seed, data.gameMode);
+                            if (mobSystemRef.current) mobSystemRef.current.gameMode = data.gameMode;
+                        }
+                    });
+
+                    socket.on('game_state', (state) => {
+                        try {
+                            if (!state) return;
+                            if (window._syncConfirmed !== true) {
+                                console.log('[GAME] Authoritative sync received!');
+                                window._syncConfirmed = true;
+                            }
+
+                            if (isHost.current) {
+                                isHost.current = false;
+                                if (mobSystemRef.current) mobSystemRef.current.isHost = false;
+                            }
+
+                            gameStateObj.current.syncFromHost(state);
+
+                            // Sync Player
+                            const serverMe = state.players?.[socket.id];
+                            if (serverMe) {
+                                statsRef.current.hp = serverMe.hp;
+                                statsRef.current.maxHp = serverMe.maxHp;
+                                statsRef.current.mana = serverMe.mana;
+                                statsRef.current.stamina = serverMe.stamina;
+                            }
+
+                            // Sync Mobs & Wave
+                            if (mobSystemRef.current && state.wave) {
+                                mobSystemRef.current.syncFromHost(state.enemies || state.mobs || []);
+                                mobSystemRef.current.waveStats.current = state.wave.current;
+                                mobSystemRef.current.waveStats.timer = state.wave.timer;
+                                mobSystemRef.current.waveStats.totalMobs = state.wave.total || 0;
+                                mobSystemRef.current.waveStats.deadMobs = state.wave.dead || 0;
+
+                                setWaveUi({
+                                    current: state.wave.current,
+                                    timer: state.wave.timer,
+                                    total: state.wave.total || 0,
+                                    dead: state.wave.dead || 0,
+                                    baseHp: state.base?.hp || 1000
+                                });
+                            }
+
+                            if (projectileSystem.current) {
+                                projectileSystem.current.projectiles = state.projectiles || [];
+                            }
+                        } catch (err) {
+                            console.error('[GAME] Sync Error:', err);
+                        }
+                    });
+                }
             });
 
+        // Resize
         const resize = () => {
             if (canvasRef.current) {
                 canvasRef.current.width = window.innerWidth;
@@ -161,6 +228,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         window.addEventListener('resize', resize);
         resize();
 
+        // Loop
         let animationFrame;
         const loop = () => {
             const now = Date.now();
@@ -185,7 +253,6 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 const isWASD = s.controlMode === 'wasd';
                 const isArrows = s.controlMode === 'arrows';
 
-                // Discrete Actions (Skills)
                 if (isWASD) {
                     if (key === '1') useSkill(1);
                     if (key === '2') useSkill(2);
@@ -199,24 +266,23 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 if (key === ' ') dash();
             }
         };
-
         window.addEventListener('keydown', handleKeyActions);
-
 
         return () => {
             window.removeEventListener('resize', resize);
             window.removeEventListener('keydown', handleKeyActions);
             cancelAnimationFrame(animationFrame);
             if (networkRef.current) networkRef.current.cleanup();
+            socket?.off('game_state');
+            socket?.off('room_joined');
         };
     }, []);
 
     const updateGame = (dt) => {
         handleMovement(dt);
 
-        const lerp = 0.12;
-        cameraRef.current.x += (myPos.current.x - cameraRef.current.x) * lerp;
-        cameraRef.current.y += (myPos.current.y - cameraRef.current.y) * lerp;
+        cameraRef.current.x += (myPos.current.x - cameraRef.current.x) * LERP_FACTOR;
+        cameraRef.current.y += (myPos.current.y - cameraRef.current.y) * LERP_FACTOR;
 
         if (mobSystemRef.current && combatRef.current) {
             // Update Rhythm
@@ -310,6 +376,24 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
                 isMoving: Math.hypot(myPos.current.x - lastPosRef.current.x, myPos.current.y - lastPosRef.current.y) > 0.1
             };
             networkRef.current.sendPlayerUpdate(me);
+
+            // Authoritative Sync to Socket.IO Server
+            if (socket) {
+                const s = settingsRef.current;
+                const mode = s.controlMode || 'wasd';
+                const input = controlsRef.current.getMovement(mode);
+                socket.emit('player_input', {
+                    roomId,
+                    input: {
+                        vector: { x: input.mx, y: input.my },
+                        pos: { x: myPos.current.x, y: myPos.current.y }, // Snap position
+                        actions: {
+                            skill_q: controlsRef.current.isPressed('1') || controlsRef.current.isPressed('q'),
+                            skill_space: controlsRef.current.isPressed(' ')
+                        }
+                    }
+                });
+            }
         }
 
         // 4. Natural Regeneration (HP, Mana, Stamina)
@@ -328,18 +412,17 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             statsRef.current.stamina = Math.min(statsRef.current.maxStamina, statsRef.current.stamina + stamRegen * dt);
         }
 
-        // Efficient UI updates
-        setUiStats({ ...statsRef.current });
-
-        if (Math.random() < 0.1 && mobSystemRef.current) {
+        if (mobSystemRef.current) {
             const ws = mobSystemRef.current.waveStats;
-            setWaveUi({
-                current: ws.current,
-                timer: ws.timer,
-                total: ws.totalMobs,
-                dead: ws.deadMobs,
-                baseHp: baseHpRef.current
-            });
+            if (ws.current !== waveUi.current || ws.deadMobs !== waveUi.dead || ws.totalMobs !== waveUi.total || Math.ceil(ws.timer) !== Math.ceil(waveUi.timer)) {
+                setWaveUi({
+                    current: ws.current,
+                    timer: ws.timer,
+                    total: ws.totalMobs,
+                    dead: ws.deadMobs,
+                    baseHp: baseHpRef.current
+                });
+            }
         }
     };
 
@@ -551,7 +634,7 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
         };
         const extraEntities = [];
         if (mobSystemRef.current?.waveSystem?.nextWaveTimer > 0) {
-            extraEntities.push({ type: 'wave_timer', value: mobSystemRef.current.waveSystem.nextWaveTimer });
+            extraEntities.push({ type: 'wave_timer', value: mobSystemRef.current.waveStats.timer });
         }
 
         const myStatuses = mobSystemRef.current?.statusSystem?.effects?.get(playerName) || [];
@@ -728,48 +811,61 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             </div>
 
             <div style={{ position: 'fixed', top: 20, right: 20, textAlign: 'right', zIndex: 10 }}>
-                <div style={{ background: 'rgba(0,0,0,0.6)', padding: '15px', border: '3px solid #ffd700', borderRadius: '4px', minWidth: '200px' }}>
-                    <div style={{ fontSize: '2.2rem', color: '#ffd700' }}>ONDA {waveUi.current}</div>
-                    <div style={{ fontSize: '1.2rem', color: '#fff', opacity: 0.8 }}>MOBS: {waveUi.dead}/{waveUi.total}</div>
-
-                    {waveUi.timer > 0 && waveUi.dead >= waveUi.total && (
-                        <div style={{ marginTop: '10px' }}>
-                            <div style={{ color: '#ef4444', fontSize: '1.5rem', fontWeight: 'bold' }}>PRÓXIMA EM: {Math.ceil(waveUi.timer)}s</div>
-                            {isHost.current && (
-                                <button
-                                    onClick={() => mobSystemRef.current?.skipWaveWaiting()}
-                                    style={{
-                                        marginTop: '10px', background: '#16a34a', border: '2px solid #fff',
-                                        color: '#fff', padding: '8px 15px', borderRadius: '4px',
-                                        cursor: 'pointer', fontFamily: 'VT323', fontSize: '1.2rem',
-                                        display: 'flex', alignItems: 'center', gap: '8px', width: '100%', justifyContent: 'center'
-                                    }}
-                                >
-                                    <Play size={18} fill="currentColor" /> INICIAR AGORA
-                                </button>
-                            )}
-                        </div>
-                    )}
-
-                    {isHost.current && waveUi.dead < waveUi.total && (mobSystemRef.current?.spawnTimeouts?.length > 0) && (
-                        <button
-                            onClick={() => mobSystemRef.current?.spawnInstant()}
-                            style={{
-                                marginTop: '10px', background: '#b45309', border: '2px solid #fff',
-                                color: '#fff', padding: '8px 15px', borderRadius: '4px',
-                                cursor: 'pointer', fontFamily: 'VT323', fontSize: '1.2rem',
-                                display: 'flex', alignItems: 'center', gap: '8px', width: '100%', justifyContent: 'center'
-                            }}
-                        >
-                            <Zap size={18} fill="currentColor" /> APARECER TODOS
-                        </button>
-                    )}
-
-                    <div style={{ marginTop: '10px', width: '100%', height: '10px', background: '#333', border: '1px solid #000', position: 'relative' }}>
-                        <div style={{ width: `${(waveUi.baseHp / 1000) * 100}%`, height: '100%', background: '#22c55e' }} />
-                        <span style={{ position: 'absolute', top: -20, left: 0, fontSize: '0.8rem', color: '#22c55e' }}>HP BASE: {waveUi.baseHp}</span>
+                {gameMode === 'boss_rush' ? (
+                    <div style={{ background: 'rgba(50,0,0,0.8)', padding: '15px', border: '3px solid #ff4444', borderRadius: '4px', minWidth: '200px' }}>
+                        <div style={{ fontSize: '2.2rem', color: '#ff4444' }}>BOSS RUSH</div>
+                        <div style={{ fontSize: '1.2rem', color: '#fff' }}>SOBREVIVA AO COLISEU</div>
                     </div>
-                </div>
+                ) : (
+                    <div style={{ background: 'rgba(0,0,0,0.6)', padding: '15px', border: '3px solid #ffd700', borderRadius: '4px', minWidth: '200px' }}>
+                        <div style={{ fontSize: '2.2rem', color: '#ffd700' }}>ONDA {waveUi.current}</div>
+                        <div style={{ fontSize: '1.2rem', color: '#fff', opacity: 0.8 }}>MOBS: {waveUi.dead}/{waveUi.total}</div>
+
+                        {waveUi.timer > 0 && waveUi.dead >= waveUi.total && (
+                            <div style={{ marginTop: '10px' }}>
+                                <div style={{ color: '#ef4444', fontSize: '1.5rem', fontWeight: 'bold' }}>PRÓXIMA EM: {Math.ceil(waveUi.timer)}s</div>
+                                {amIHost.current && (
+                                    <button
+                                        onClick={() => {
+                                            if (socket) socket.emit('wave_control', { roomId, type: 'skip_wave' });
+                                            else mobSystemRef.current?.skipWaveWaiting();
+                                        }}
+                                        style={{
+                                            marginTop: '10px', background: '#16a34a', border: '2px solid #fff',
+                                            color: '#fff', padding: '8px 15px', borderRadius: '4px',
+                                            cursor: 'pointer', fontFamily: 'VT323', fontSize: '1.2rem',
+                                            display: 'flex', alignItems: 'center', gap: '8px', width: '100%', justifyContent: 'center'
+                                        }}
+                                    >
+                                        <Play size={18} fill="currentColor" /> INICIAR AGORA
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
+                        {amIHost.current && waveUi.dead < waveUi.total && (
+                            <button
+                                onClick={() => {
+                                    if (socket) socket.emit('wave_control', { roomId, type: 'spawn_all' });
+                                    else mobSystemRef.current?.spawnInstant();
+                                }}
+                                style={{
+                                    marginTop: '10px', background: '#b45309', border: '2px solid #fff',
+                                    color: '#fff', padding: '8px 15px', borderRadius: '4px',
+                                    cursor: 'pointer', fontFamily: 'VT323', fontSize: '1.2rem',
+                                    display: 'flex', alignItems: 'center', gap: '8px', width: '100%', justifyContent: 'center'
+                                }}
+                            >
+                                <Zap size={18} fill="currentColor" /> APARECER TODOS
+                            </button>
+                        )}
+
+                        <div style={{ marginTop: '10px', width: '100%', height: '10px', background: '#333', border: '1px solid #000', position: 'relative' }}>
+                            <div style={{ width: `${(waveUi.baseHp / 1000) * 100}%`, height: '100%', background: '#22c55e' }} />
+                            <span style={{ position: 'absolute', top: -20, left: 0, fontSize: '0.8rem', color: '#22c55e' }}>HP BASE: {waveUi.baseHp}</span>
+                        </div>
+                    </div>
+                )}
                 <div style={{ marginTop: '10px', display: 'flex', gap: '10px', justifyContent: 'flex-end', pointerEvents: 'auto' }}>
                     <div style={{ background: 'rgba(0,0,0,0.6)', border: '2px solid #ffd700', color: '#ffd700', padding: '5px 10px', borderRadius: '4px', fontSize: '0.9rem' }}>
                         CONTROLES: {settings.controlMode === 'arrows' ? 'SETAS + QWER' : 'WASD + 1234'}
@@ -786,106 +882,112 @@ const Game = ({ roomId, playerName, championId, user, setInGame }) => {
             </div>
 
             {/* SCOREBOARD OVERLAY */}
-            {showScoreboard && (
-                <div style={{
-                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1500,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none'
-                }}>
+            {
+                showScoreboard && (
                     <div style={{
-                        background: '#1a1a1a', border: '4px solid #ffd700', padding: '30px',
-                        width: '400px', pointerEvents: 'auto'
+                        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1500,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none'
                     }}>
-                        <h2 style={{ color: '#ffd700', textAlign: 'center', fontSize: '2.5rem', marginTop: 0 }}>TABELA DE HÉROIS</h2>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #ffd700', paddingBottom: '10px', color: '#ffd700', fontSize: '1.2rem' }}>
-                            <span>GUERREIRO</span>
-                            <span>MONSTROS DERROTADOS</span>
-                        </div>
-                        <div style={{ marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {/* MY PLAYER */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fff', fontSize: '1.5rem', background: 'rgba(255,215,0,0.1)', padding: '5px 10px' }}>
-                                <span style={{ color: '#ffd700' }}>{playerName} (VOCÊ)</span>
-                                <span>{statsRef.current.kills}</span>
+                        <div style={{
+                            background: '#1a1a1a', border: '4px solid #ffd700', padding: '30px',
+                            width: '400px', pointerEvents: 'auto'
+                        }}>
+                            <h2 style={{ color: '#ffd700', textAlign: 'center', fontSize: '2.5rem', marginTop: 0 }}>TABELA DE HÉROIS</h2>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #ffd700', paddingBottom: '10px', color: '#ffd700', fontSize: '1.2rem' }}>
+                                <span>GUERREIRO</span>
+                                <span>MONSTROS DERROTADOS</span>
                             </div>
-                            {/* OTHER PLAYERS */}
-                            {playersRef.current.map(p => (
-                                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', color: '#fff', fontSize: '1.5rem', padding: '5px 10px' }}>
-                                    <span>{p.name}</span>
-                                    <span>{p.kills || 0}</span>
+                            <div style={{ marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                {/* MY PLAYER */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fff', fontSize: '1.5rem', background: 'rgba(255,215,0,0.1)', padding: '5px 10px' }}>
+                                    <span style={{ color: '#ffd700' }}>{playerName} (VOCÊ)</span>
+                                    <span>{statsRef.current.kills}</span>
                                 </div>
-                            ))}
-                        </div>
-                        <div style={{ marginTop: '30px', textAlign: 'center', color: '#ffd700', fontSize: '1rem', opacity: 0.7 }}>
-                            {('ontouchstart' in window) ? "Clique no mapa novamente para fechar" : "Solte TAB para fechar"}
+                                {/* OTHER PLAYERS */}
+                                {playersRef.current.map(p => (
+                                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', color: '#fff', fontSize: '1.5rem', padding: '5px 10px' }}>
+                                        <span>{p.name}</span>
+                                        <span>{p.kills || 0}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <div style={{ marginTop: '30px', textAlign: 'center', color: '#ffd700', fontSize: '1rem', opacity: 0.7 }}>
+                                {('ontouchstart' in window) ? "Clique no mapa novamente para fechar" : "Solte TAB para fechar"}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 10 }}>
                 <button onClick={toggleFullscreen} style={{ background: 'rgba(0,0,0,0.6)', border: '2px solid #ffd700', color: '#ffd700', padding: '10px 20px', borderRadius: '4px', cursor: 'pointer', pointerEvents: 'auto' }}>FULLSCREEN</button>
             </div>
 
-            {showSettings && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ background: '#1a1a1a', border: '4px solid #ffd700', padding: '40px', width: '400px', textAlign: 'center' }}>
-                        <h1 style={{ color: '#ffd700', marginBottom: '30px' }}>CONFIGURAÇÕES</h1>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '40px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
-                                <span>Música</span>
-                                <button onClick={() => {
-                                    const ns = { ...settings, musicEnabled: !settings.musicEnabled };
-                                    setSettings(ns); localStorage.setItem('gameSettings', JSON.stringify(ns));
-                                }} style={{ padding: '8px 16px', background: settings.musicEnabled ? '#16a34a' : '#ef4444', border: 'none', color: '#fff', fontFamily: 'VT323', fontSize: '1.2rem', cursor: 'pointer' }}>{settings.musicEnabled ? 'Ligada' : 'Desligada'}</button>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
-                                <span>Esquema de Controle</span>
-                                <button onClick={() => {
-                                    const nextMode = settings.controlMode === 'wasd' ? 'arrows' : 'wasd';
-                                    const ns = { ...settings, controlMode: nextMode };
-                                    setSettings(ns); localStorage.setItem('gameSettings', JSON.stringify(ns));
-                                }} style={{ padding: '8px 16px', background: '#3b82f6', border: 'none', color: '#fff', fontFamily: 'VT323', fontSize: '1.2rem', cursor: 'pointer' }}>{settings.controlMode === 'wasd' ? 'WASD' : 'SETAS'}</button>
-                            </div>
-
-                            {/* ADMIN CHEATS */}
-                            {playerName === 'admin' && (
-                                <div style={{ marginTop: '20px', borderTop: '2px solid #555', paddingTop: '15px' }}>
-                                    <h3 style={{ color: '#ffd700', fontSize: '1rem', marginBottom: '10px' }}>PAINEL ADMIN</h3>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                        {[
-                                            { label: 'Vida Infinita', key: 'godMode' },
-                                            { label: 'Stamina Infinita', key: 'infStamina' },
-                                            { label: 'Super Velocidade', key: 'superSpeed' }
-                                        ].map(cheat => (
-                                            <div key={cheat.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
-                                                <span style={{ fontSize: '0.9rem' }}>{cheat.label}</span>
-                                                <button onClick={() => {
-                                                    const ns = { ...settings, [cheat.key]: !settings[cheat.key] };
-                                                    setSettings(ns); localStorage.setItem('gameSettings', JSON.stringify(ns));
-                                                }} style={{ padding: '4px 10px', background: settings[cheat.key] ? '#16a34a' : '#555', border: 'none', color: '#fff', fontFamily: 'VT323', fontSize: '1rem', cursor: 'pointer' }}>
-                                                    {settings[cheat.key] ? 'ATIVO' : 'OFF'}
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
+            {
+                showSettings && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ background: '#1a1a1a', border: '4px solid #ffd700', padding: '40px', width: '400px', textAlign: 'center' }}>
+                            <h1 style={{ color: '#ffd700', marginBottom: '30px' }}>CONFIGURAÇÕES</h1>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '40px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
+                                    <span>Música</span>
+                                    <button onClick={() => {
+                                        const ns = { ...settings, musicEnabled: !settings.musicEnabled };
+                                        setSettings(ns); localStorage.setItem('gameSettings', JSON.stringify(ns));
+                                    }} style={{ padding: '8px 16px', background: settings.musicEnabled ? '#16a34a' : '#ef4444', border: 'none', color: '#fff', fontFamily: 'VT323', fontSize: '1.2rem', cursor: 'pointer' }}>{settings.musicEnabled ? 'Ligada' : 'Desligada'}</button>
                                 </div>
-                            )}
-                        </div>
-                        <button onClick={() => setShowSettings(false)} style={{ background: '#ffd700', color: '#000', padding: '10px 40px', fontSize: '1.2rem', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>FECHAR</button>
-                        {settings.musicEnabled && <div style={{ display: 'none' }}><MusicPlayer /></div>}
-                    </div>
-                </div>
-            )}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
+                                    <span>Esquema de Controle</span>
+                                    <button onClick={() => {
+                                        const nextMode = settings.controlMode === 'wasd' ? 'arrows' : 'wasd';
+                                        const ns = { ...settings, controlMode: nextMode };
+                                        setSettings(ns); localStorage.setItem('gameSettings', JSON.stringify(ns));
+                                    }} style={{ padding: '8px 16px', background: '#3b82f6', border: 'none', color: '#fff', fontFamily: 'VT323', fontSize: '1.2rem', cursor: 'pointer' }}>{settings.controlMode === 'wasd' ? 'WASD' : 'SETAS'}</button>
+                                </div>
 
-            {showEscMenu && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
-                    <div style={{ background: '#1a1a1a', border: '5px solid #ffd700', padding: '40px 60px', textAlign: 'center' }}>
-                        <h1 style={{ fontSize: '4rem', color: '#ffd700', margin: '0 0 30px 0' }}>MENU</h1>
-                        <button onClick={() => setShowEscMenu(false)} style={{ background: '#22c55e', color: '#fff', padding: '15px 40px', fontSize: '2rem', fontFamily: 'VT323', width: '100%', marginBottom: '10px', border: 'none', cursor: 'pointer' }}>RETOMAR</button>
-                        <button onClick={handleExitToLobby} style={{ background: '#ef4444', color: '#fff', padding: '15px 40px', fontSize: '2rem', fontFamily: 'VT323', width: '100%', border: 'none', cursor: 'pointer' }}>SAIR</button>
+                                {/* ADMIN CHEATS */}
+                                {playerName === 'admin' && (
+                                    <div style={{ marginTop: '20px', borderTop: '2px solid #555', paddingTop: '15px' }}>
+                                        <h3 style={{ color: '#ffd700', fontSize: '1rem', marginBottom: '10px' }}>PAINEL ADMIN</h3>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                            {[
+                                                { label: 'Vida Infinita', key: 'godMode' },
+                                                { label: 'Stamina Infinita', key: 'infStamina' },
+                                                { label: 'Super Velocidade', key: 'superSpeed' }
+                                            ].map(cheat => (
+                                                <div key={cheat.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
+                                                    <span style={{ fontSize: '0.9rem' }}>{cheat.label}</span>
+                                                    <button onClick={() => {
+                                                        const ns = { ...settings, [cheat.key]: !settings[cheat.key] };
+                                                        setSettings(ns); localStorage.setItem('gameSettings', JSON.stringify(ns));
+                                                    }} style={{ padding: '4px 10px', background: settings[cheat.key] ? '#16a34a' : '#555', border: 'none', color: '#fff', fontFamily: 'VT323', fontSize: '1rem', cursor: 'pointer' }}>
+                                                        {settings[cheat.key] ? 'ATIVO' : 'OFF'}
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                            <button onClick={() => setShowSettings(false)} style={{ background: '#ffd700', color: '#000', padding: '10px 40px', fontSize: '1.2rem', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>FECHAR</button>
+                            {settings.musicEnabled && <div style={{ display: 'none' }}><MusicPlayer /></div>}
+                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+
+            {
+                showEscMenu && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+                        <div style={{ background: '#1a1a1a', border: '5px solid #ffd700', padding: '40px 60px', textAlign: 'center' }}>
+                            <h1 style={{ fontSize: '4rem', color: '#ffd700', margin: '0 0 30px 0' }}>MENU</h1>
+                            <button onClick={() => setShowEscMenu(false)} style={{ background: '#22c55e', color: '#fff', padding: '15px 40px', fontSize: '2rem', fontFamily: 'VT323', width: '100%', marginBottom: '10px', border: 'none', cursor: 'pointer' }}>RETOMAR</button>
+                            <button onClick={handleExitToLobby} style={{ background: '#ef4444', color: '#fff', padding: '15px 40px', fontSize: '2rem', fontFamily: 'VT323', width: '100%', border: 'none', cursor: 'pointer' }}>SAIR</button>
+                        </div>
+                    </div>
+                )
+            }
+        </div >
     );
 };
 

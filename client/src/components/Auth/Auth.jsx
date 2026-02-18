@@ -67,7 +67,7 @@ const Auth = () => {
 
                 <form onSubmit={handleAuth} className="hero-input-area" style={{ padding: '2rem' }}>
                     <div style={{ marginBottom: '1.5rem' }}>
-                        <label className="label-technical" style={{ color: '#ffd700' }}>CORREIO DO REINO (EMAIL)</label>
+                        <label className="label-technical" style={{ color: '#ffd700' }}>E-MAIL</label>
                         <input
                             type="email"
                             className="hero-text-input"
@@ -84,7 +84,7 @@ const Auth = () => {
                     </div>
 
                     <div style={{ marginBottom: '2rem' }}>
-                        <label className="label-technical" style={{ color: '#ffd700' }}>PALAVRA MÁGICA (SENHA)</label>
+                        <label className="label-technical" style={{ color: '#ffd700' }}>SENHA</label>
                         <input
                             type="password"
                             className="hero-text-input"

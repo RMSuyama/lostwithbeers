@@ -6,9 +6,10 @@ import { StatusSystem } from './StatusSystem';
 const BASE_POS = POSITIONS.BASE;
 
 export class MobSystem {
-    constructor(isHost, performanceSystem) {
+    constructor(isHost, performanceSystem, gameMode = 'standard') {
         this.isHost = isHost;
         this.performanceSystem = performanceSystem;
+        this.gameMode = gameMode;
         this.mobs = [];
         this.waveSystem = new WaveSystem();
         this.statusSystem = new StatusSystem();
@@ -19,6 +20,7 @@ export class MobSystem {
 
     // --- UPDATE LOOP ---
     update(dt, playerPositions, baseHpRef, spawnDamage, setGameState, engine) {
+        // ... (existing update logic same, lines 22-141)
         let deadCount = 0;
         let xpGain = 0;
         let kills = 0;
@@ -33,11 +35,6 @@ export class MobSystem {
 
             if (waveUpdate.startWave) {
                 this.startWave(waveUpdate.wave, playerPositions.length);
-            }
-
-            // Periodic Elite Intersection Spawn (Host Only)
-            if (this.waveSystem.isWaveActive && now % 15000 < 50) { // Every ~15 seconds if active
-                if (Math.random() > 0.5) this.spawnAtIntersection('elite');
             }
         }
 
@@ -152,10 +149,12 @@ export class MobSystem {
         this.waveStats.totalMobs = stats.count;
         this.waveStats.deadMobs = 0;
 
-        // Boss Wave Logic (Every 5 waves)
-        const isBossWave = waveNum % 5 === 0;
+        // Boss Logic
+        const isBossWave = (this.gameMode === 'boss_rush') || (waveNum % 5 === 0);
+
         if (isBossWave) {
-            this.spawnMob(waveNum, -1, { ...stats, hp: stats.hp * 10, speed: stats.speed * 0.6, type: 'boss' });
+            // In Boss Rush, the boss is the main event of EVERY wave
+            this.spawnMob(waveNum, -1, { ...stats, hp: stats.hp, speed: stats.speed * 0.6, type: 'boss' });
         }
 
         for (let i = 0; i < stats.count; i++) {
@@ -183,13 +182,52 @@ export class MobSystem {
         m.id = `w-${waveNum}-${i}-${Date.now()}`;
         m.x = spawnSide.x + (Math.random() - 0.5) * 100;
         m.y = spawnSide.y + (Math.random() - 0.5) * 100;
-        m.type = stats.type || (isElite ? 'elite' : (Math.random() > 0.4 ? 'orc' : 'slime'));
-        m.hp = isElite ? stats.hp * 3 : stats.hp;
-        m.maxHp = isElite ? stats.hp * 3 : stats.hp;
-        m.speed = isElite ? stats.speed * 0.7 : stats.speed + Math.random() * 0.2;
-        m.damage = isElite ? stats.damage * 2 : stats.damage;
-        m.isElite = isElite || m.type === 'boss';
-        m.isBoss = m.type === 'boss';
+
+        // Mode-Specific Logic
+        if (this.gameMode === 'boss_rush') {
+            // In Boss Rush, normal mobs are Elites, and every wave has a Boss
+            if (stats.type === 'boss') {
+                m.type = this.getBossType(waveNum);
+                m.isBoss = true;
+                m.isElite = true;
+                m.hp = stats.hp * 5; // Boss HP scaling
+                m.maxHp = m.hp;
+                m.damage = stats.damage * 0.8; // Nerfed from 2.0 to 0.8 (User feedback: Instant death)
+                m.speed = stats.speed * 0.5; // Slower
+            } else {
+                // Minions in Boss Rush are Elite versions of normal mobs
+                m.type = Math.random() > 0.5 ? 'orc' : 'slime';
+                m.isElite = true;
+                m.hp = stats.hp * 2;
+                m.maxHp = m.hp;
+                m.damage = stats.damage * 0.6; // Nerfed from 1.5 to 0.6
+                m.speed = stats.speed * 0.8;
+                m.isBoss = false;
+            }
+        } else {
+            // Standard Mode
+            if (stats.type === 'boss') {
+                m.type = this.getBossType(waveNum); // Use unique boss types even in standard
+                m.isBoss = true;
+                m.isElite = true;
+                m.hp = stats.hp * 10;
+                m.maxHp = m.hp;
+            } else {
+                m.type = stats.type || (isElite ? 'elite' : (Math.random() > 0.4 ? 'orc' : 'slime'));
+                m.hp = isElite ? stats.hp * 3 : stats.hp;
+                m.maxHp = m.hp;
+                m.damage = isElite ? stats.damage * 2 : stats.damage;
+                m.isElite = isElite;
+                m.isBoss = false;
+            }
+            m.speed = isElite ? stats.speed * 0.7 : stats.speed + Math.random() * 0.2;
+        }
+
+        if (!m.isBoss) {
+            m.damage = m.damage || stats.damage;
+            m.speed = m.speed || stats.speed;
+        }
+
         m.lastAttack = 0;
         m.lastBaseAttack = 0;
         m.isStunned = false;
@@ -201,11 +239,23 @@ export class MobSystem {
         m.pathIndex = 0;
 
         // Dynamic Boss Choice
-        if (m.type === 'boss') {
+        if (m.isBoss) {
             m.strategy = Math.random() > 0.5 ? 'split' : 'direct';
         }
 
         this.mobs.push(m);
+    }
+
+    getBossType(waveNum) {
+        // Rotate through unique bosses
+        const bosses = ['kraken', 'ghost_captain', 'leviathan', 'siren', 'poseidon'];
+        // In boss rush, wave 1 is boss 1. In standard, wave 5 is boss 1. 
+        // Logic: (waveNum / 5) % 5 for standard, (waveNum) % 5 for boss rush
+        const index = this.gameMode === 'boss_rush'
+            ? (waveNum - 1) % bosses.length
+            : (Math.floor(waveNum / 5) - 1) % bosses.length;
+
+        return bosses[Math.abs(index)];
     }
 
     spawnAtIntersection(type = 'elite') {

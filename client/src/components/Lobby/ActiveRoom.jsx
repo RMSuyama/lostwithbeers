@@ -9,7 +9,7 @@ import LobbyControls from './LobbyControls';
 import LoadingScreen from './LoadingScreen';
 import './Lobby.css';
 
-const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
+const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame, socket }) => {
     const { showAlert } = useModal();
     const [players, setPlayers] = useState([]);
     const [me, setMe] = useState(null);
@@ -74,7 +74,7 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
                     isTransitioning.current = true;
                     setIsLoading(true);
                     setTimeout(() => {
-                        setInGame(true, championIdRef.current);
+                        setInGame(true, championIdRef.current, payload.new.game_mode);
                     }, 500);
                 }
             })
@@ -102,13 +102,18 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
                 }
             });
 
+        if (socket) {
+            console.log('[ActiveRoom] Joining Socket.IO lobby room:', roomId);
+            socket.emit('join_room', { roomId, userId: user?.id });
+        }
+
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
             supabase.removeChannel(channel);
             // Delay cleanup slightly to avoid Strict Mode double-kill
             setTimeout(cleanupPlayer, 200);
         };
-    }, [roomId, user?.id]);
+    }, [roomId, user?.id, socket]);
 
     const fetchRoom = async () => {
         const { data } = await supabase.from('rooms').select('*').eq('id', roomId).single();
@@ -207,21 +212,29 @@ const ActiveRoom = ({ roomId, playerName, user, leaveRoom, setInGame }) => {
     const startGame = async () => {
         if (!me?.is_host) return;
         if (players.length < 1) return showAlert('O herói precisa de um propósito!');
-        if (players.some(p => !p.is_ready)) return showAlert('Nem todos os guerreiros estão prontos!');
+        if (players.filter(p => !p.is_host).some(p => !p.is_ready)) return showAlert('Nem todos os guerreiros estão prontos!');
+        if (!me?.champion_id) return showAlert('Escolha seu campeão antes de liderar a batalha!');
 
-        console.log('Starting battle...');
+        console.log('[ActiveRoom] Starting battle... Signal sent to Supabase.');
         setIsLoading(true);
         const { error } = await supabase.from('rooms').update({ status: 'playing' }).eq('id', roomId);
 
+        // Notify server to start game loop via socket
+        if (socket) {
+            console.log('[ActiveRoom] Emitting start_game to server via socket.');
+            socket.emit('start_game', { roomId });
+        }
+
         if (error) {
-            console.error('Error starting game:', error);
+            console.error('[ActiveRoom] Error starting game:', error);
             showAlert('Erro ao iniciar a batalha: ' + error.message);
             setIsLoading(false);
         } else {
-            console.log('Battle start signal sent successfully. Champion:', championIdRef.current);
+            console.log('[ActiveRoom] Battle start signal success. Transitioning in 500ms... Champ:', championIdRef.current);
             isTransitioning.current = true;
             setTimeout(() => {
-                setInGame(true, championIdRef.current);
+                console.log('[ActiveRoom] Calling setInGame(true)');
+                setInGame(true, championIdRef.current, room?.game_mode);
             }, 500);
         }
     };

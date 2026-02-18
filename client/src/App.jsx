@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import Lobby from './components/Lobby/Lobby';
 import ActiveRoom from './components/Lobby/ActiveRoom';
@@ -9,8 +9,22 @@ import Game from './game/Game';
 import './index.css';
 import { ModalProvider } from './context/ModalContext';
 import CustomModal from './components/Common/CustomModal';
-
+import { io } from 'socket.io-client';
 import loadingBg from './loading_bg.png';
+
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
+let socket;
+try {
+    socket = io(SERVER_URL, {
+        autoConnect: true,
+        reconnection: true,
+        timeout: 10000
+    });
+    socket.on('connect', () => console.log('[SOCKET] Connected to server at', SERVER_URL));
+    socket.on('connect_error', (err) => console.error('[SOCKET] Connection Error:', err));
+} catch (err) {
+    console.error('[SOCKET] Failed to initialize socket.io:', err);
+}
 
 const ProtectedRoute = ({ children, session }) => {
     if (!session) return <Navigate to="/login" replace />;
@@ -195,8 +209,9 @@ const ActiveRoomWrapper = ({ session }) => {
             playerName={playerName}
             user={session.user}
             leaveRoom={() => navigate('/lobby')}
-            setInGame={(val, champId) => {
-                if (val) navigate(`/game/${roomId}/${champId || 'jaca'}`);
+            socket={socket}
+            setInGame={(val, champId, gameMode) => {
+                if (val) navigate(`/game/${roomId}/${champId || 'jaca'}`, { state: { gameMode } });
             }}
         />
     );
@@ -205,6 +220,7 @@ const ActiveRoomWrapper = ({ session }) => {
 const GameWrapper = ({ session }) => {
     const { roomId, championId } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const [playerName] = useState(localStorage.getItem('playerName') || session.user.email?.split('@')[0] || 'Guerreiro');
 
     return (
@@ -212,7 +228,9 @@ const GameWrapper = ({ session }) => {
             roomId={roomId}
             playerName={playerName}
             championId={championId || 'jaca'}
+            initialGameMode={location.state?.gameMode}
             user={session.user}
+            socket={socket}
             setInGame={(val) => {
                 if (!val) navigate('/lobby');
             }}

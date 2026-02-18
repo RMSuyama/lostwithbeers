@@ -8,5 +8,8 @@
         "build": "cd client && npm install && npm run build",
         "install-all": "cd client && npm install && cd ../server && npm install",
         "postinstall": "npm run install-all"
+    },
+    "devDependencies": {
+        "canvas": "^3.2.1"
     }
 }

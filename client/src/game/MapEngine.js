@@ -1,8 +1,41 @@
-import { TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, TILE_TYPES } from './constants';
+import { CHAMPIONS, getChamp } from './Champions';
 import { CHAMPION_SKINS } from './renderers/ChampionRenderer';
-import { getChamp } from './Champions';
 
-export const generateMap = (seed = 0) => {
+import { TILE_SIZE, MAP_WIDTH, MAP_HEIGHT, TILE_TYPES } from './constants';
+
+export const generateColosseumMap = () => {
+    // Initialize Arrays
+    const grid = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(TILE_TYPES.GRASS));
+    const scales = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(0));
+    const collisions = Array(MAP_HEIGHT).fill().map(() => Array(MAP_WIDTH).fill(false));
+
+    const centerX = MAP_WIDTH / 2;
+    const centerY = MAP_HEIGHT / 2;
+    const radius = 45;
+
+    // Draw Arena Walls
+    for (let y = 0; y < MAP_HEIGHT; y++) {
+        for (let x = 0; x < MAP_WIDTH; x++) {
+            const dist = Math.hypot(x - centerX, y - centerY);
+            if (dist > radius) {
+                grid[y][x] = TILE_TYPES.STONE_WALL;
+                scales[y][x] = 2;
+                collisions[y][x] = true;
+            } else {
+                // Checkered floor pattern
+                if ((x + y) % 2 === 0) {
+                    grid[y][x] = TILE_TYPES.COBBLESTONE;
+                }
+            }
+        }
+    }
+
+    return { grid, scales, collisions };
+};
+
+export const generateMap = (seed = 0, mapType = 'standard') => {
+    if (mapType === 'boss_rush') return generateColosseumMap();
+
     // Better Random
     let s = seed + 12345;
     const rnd = () => {
@@ -125,10 +158,40 @@ export const getMinimapData = (mapData) => {
 };
 
 export class MapRenderer {
-    constructor(canvas, seed = 0) {
+    constructor(canvas, seed = 0, mapType = 'standard') {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
-        this.mapData = generateMap(seed);
+        this.mapType = mapType;
+        this.mapData = generateMap(seed, mapType);
+
+        // Load Champion Assets
+        this.championAssets = {};
+        Object.keys(CHAMPIONS).forEach(id => {
+            const img = new Image();
+            // Try PNG first, fallback to SVG if PNG doesn't load
+            img.src = `/assets/champions/${id}.png`;
+            img.onerror = () => {
+                img.src = `/assets/champions/${id}.svg`;
+            };
+            this.championAssets[id] = { sprite: img };
+        });
+
+        // Load Mob Assets
+        this.mobAssets = {};
+        ['scout', 'warrior', 'brute', 'ghost', 'boss'].forEach(id => {
+            const img = new Image();
+            img.src = `/assets/mobs/${id}.png`;
+            this.mobAssets[id] = { sprite: img };
+        });
+
+        // Load Skill/Projectile Assets
+        this.skillAssets = {};
+        ['fireball', 'arrow', 'bolt', 'wave', 'slash'].forEach(id => {
+            const img = new Image();
+            img.src = `/assets/skills/${id}.png`;
+            this.skillAssets[id] = { sprite: img };
+        });
+
         // LOADING SCREEN PALETTE
         this.colors = {
             [TILE_TYPES.GRASS]: '#0b1a0b',     // The Loading Screen Background (Walkable)
@@ -260,7 +323,7 @@ export class MapRenderer {
 
                 // Champion Skin
                 const skin = CHAMPION_SKINS[obj.championId] || CHAMPION_SKINS.default;
-                skin(ctx, 0, 0, obj.walkTimer || 0, obj.color, obj.angle || 0, this.jacaAssets, obj.isMoving);
+                skin(ctx, 0, 0, obj.walkTimer || 0, obj.color, obj.angle || 0, this.championAssets, obj.isMoving, obj.championId, (obj.attackAnimTimer > 0));
                 ctx.restore();
 
                 // Name & Health
@@ -291,28 +354,60 @@ export class MapRenderer {
                 // Shadow for all monsters
                 ctx.fillStyle = 'rgba(0,0,0,0.4)';
                 ctx.beginPath();
-                ctx.ellipse(0, obj.type === 'boss' ? 25 : 15, obj.type === 'boss' ? 30 : 15, 8, 0, 0, Math.PI * 2);
+                ctx.ellipse(0, (obj.type === 'boss' || obj.isBoss) ? 25 : 15, (obj.type === 'boss' || obj.isBoss) ? 30 : 15, 8, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                if (obj.type === 'orc') {
-                    ctx.fillStyle = '#b91c1c'; ctx.fillRect(-15, -15, 30, 30);
-                    ctx.strokeStyle = '#fab005'; ctx.lineWidth = 2; ctx.strokeRect(-15, -15, 30, 30);
-                } else if (obj.type === 'elite') {
-                    // Elite Glow
-                    ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 15;
-                    ctx.fillStyle = '#7c2d12'; ctx.fillRect(-20, -20, 40, 40);
-                    ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 3; ctx.strokeRect(-20, -20, 40, 40);
-                } else if (obj.type === 'boss') {
-                    // Boss: Massive armored cube with pulsing core
-                    ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 25;
-                    ctx.fillStyle = '#450a0a'; ctx.fillRect(-40, -40, 80, 80);
-                    ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 5; ctx.strokeRect(-40, -40, 80, 80);
-                    // Core
-                    const pulse = (Math.sin(Date.now() * 0.005) + 1) / 2;
-                    ctx.fillStyle = `rgba(239, 68, 68, ${0.3 + pulse * 0.7})`;
-                    ctx.fillRect(-20, -20, 40, 40);
+                // Check for Sprite
+                const mobId = obj.type === 'monster' ? (obj.bossType || 'scout') : obj.type;
+                const assets = this.mobAssets[mobId];
+
+                if (assets && assets.sprite?.complete && assets.sprite.naturalWidth > 0) {
+                    // Reuse Champion rendering logic for 4-directional sprites
+                    const sprite = assets.sprite;
+                    const frameWidth = sprite.naturalWidth / 3;
+                    const frameHeight = sprite.naturalHeight / 4;
+
+                    const walkTimer = obj.walkTimer || 0;
+                    const frame = Math.floor(walkTimer * 10) % 3;
+
+                    let row = 1; // Default Front
+                    const angle = obj.angle || 0;
+                    const absAngle = ((angle % (Math.PI * 2)) + (Math.PI * 2)) % (Math.PI * 2);
+
+                    if (absAngle > Math.PI * 0.25 && absAngle <= Math.PI * 0.75) row = 3; // Right
+                    else if (absAngle > Math.PI * 0.75 && absAngle <= Math.PI * 1.25) row = 0; // Back
+                    else if (absAngle > Math.PI * 1.25 && absAngle <= Math.PI * 1.75) row = 2; // Left
+
+                    const targetHeight = (obj.type === 'boss' || obj.isBoss) ? 96 : 48;
+                    const worldScale = targetHeight / frameHeight;
+                    const targetWidth = frameWidth * worldScale;
+
+                    ctx.drawImage(
+                        sprite,
+                        frame * frameWidth, row * frameHeight, frameWidth, frameHeight,
+                        -targetWidth / 2, -targetHeight / 2, targetWidth, targetHeight
+                    );
                 } else {
-                    ctx.fillStyle = '#22d3ee'; ctx.fillRect(-10, -10, 20, 20);
+                    // Fallback to procedural
+                    if (obj.type === 'orc') {
+                        ctx.fillStyle = '#b91c1c'; ctx.fillRect(-15, -15, 30, 30);
+                        ctx.strokeStyle = '#fab005'; ctx.lineWidth = 2; ctx.strokeRect(-15, -15, 30, 30);
+                    } else if (obj.type === 'elite') {
+                        ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 15;
+                        ctx.fillStyle = '#7c2d12'; ctx.fillRect(-20, -20, 40, 40);
+                        ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 3; ctx.strokeRect(-20, -20, 40, 40);
+                    } else if (obj.type === 'boss' || obj.isBoss) {
+                        ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 25;
+                        ctx.fillStyle = '#450a0a'; ctx.fillRect(-40, -40, 80, 80);
+                        ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 5; ctx.strokeRect(-40, -40, 80, 80);
+                        const pulse = (Math.sin(Date.now() * 0.005) + 1) / 2;
+                        ctx.fillStyle = `rgba(239, 68, 68, ${0.3 + pulse * 0.7})`;
+                        ctx.fillRect(-20, -20, 40, 40);
+                    } else if (obj.type === 'scout') {
+                        ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(10, 10); ctx.lineTo(-10, 10); ctx.close(); ctx.fill();
+                    } else {
+                        ctx.fillStyle = obj.color || '#22d3ee'; ctx.fillRect(-10, -10, 20, 20);
+                    }
                 }
                 ctx.restore();
 
@@ -372,25 +467,31 @@ export class MapRenderer {
             ctx.shadowColor = p.color || '#ffd700';
             ctx.shadowBlur = 10;
 
-            if (p.type === 'boomerang') {
-                ctx.strokeStyle = p.color || '#ffd700';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.arc(0, 0, 6, 0, Math.PI * 1.5);
-                ctx.stroke();
-            } else if (p.type === 'chain') {
-                ctx.fillStyle = '#60a5fa';
-                ctx.fillRect(-4, -4, 8, 8);
-            } else if (p.type === 'curve') {
-                ctx.fillStyle = p.color || '#a855f7';
-                ctx.beginPath();
-                ctx.arc(0, 0, 6, 0, Math.PI * 2);
-                ctx.fill();
+            const skillSprite = this.skillAssets[p.type];
+            if (skillSprite && skillSprite.sprite?.complete && skillSprite.sprite.naturalWidth > 0) {
+                const img = skillSprite.sprite;
+                ctx.drawImage(img, -16, -16, 32, 32);
             } else {
-                ctx.fillStyle = p.color || '#ffd700';
-                ctx.beginPath();
-                ctx.arc(0, 0, p.big ? 8 : 4, 0, Math.PI * 2);
-                ctx.fill();
+                if (p.type === 'boomerang') {
+                    ctx.strokeStyle = p.color || '#ffd700';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 6, 0, Math.PI * 1.5);
+                    ctx.stroke();
+                } else if (p.type === 'chain') {
+                    ctx.fillStyle = '#60a5fa';
+                    ctx.fillRect(-4, -4, 8, 8);
+                } else if (p.type === 'curve') {
+                    ctx.fillStyle = p.color || '#a855f7';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillStyle = p.color || '#ffd700';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, p.big ? 8 : 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
             }
 
             ctx.restore();
@@ -413,15 +514,27 @@ export class MapRenderer {
         }
 
         if (attackEffect) {
-            ctx.save(); ctx.translate(attackEffect.x + offsetX, attackEffect.y + offsetY);
+            const noSlashTypes = ['dash', 'burst', 'projectile', 'jump', 'skill'];
+            const champ = getChamp(attackEffect.type); // type can be championId
 
-            // Fallback Animation (Simple slash/blast)
-            ctx.rotate(attackEffect.angle);
-            const gradient = ctx.createLinearGradient(0, 0, 60, 0);
-            gradient.addColorStop(0, 'rgba(255,255,255,0)'); gradient.addColorStop(0.5, 'rgba(255,255,255,0.8)'); gradient.addColorStop(1, 'rgba(255,255,255,0)');
-            ctx.fillStyle = gradient; ctx.beginPath(); ctx.arc(0, 0, 50, -0.8, 0.8); ctx.arc(0, 0, 30, 0.8, -0.8, true); ctx.fill();
+            // Only draw slash if it's NOT a no-slash type AND it's a melee champion or 'melee' type
+            const isMelee = (champ && !champ.basic.ranged) || attackEffect.type === 'melee';
+            const shouldSlash = isMelee && !noSlashTypes.includes(attackEffect.type);
 
-            ctx.restore();
+            if (shouldSlash) {
+                ctx.save(); ctx.translate(attackEffect.x + offsetX, attackEffect.y + offsetY);
+                ctx.rotate(attackEffect.angle);
+                const gradient = ctx.createLinearGradient(0, 0, 60, 0);
+                gradient.addColorStop(0, 'rgba(255,255,255,0)');
+                gradient.addColorStop(0.5, 'rgba(255,255,255,0.8)');
+                gradient.addColorStop(1, 'rgba(255,255,255,0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, 50, -0.8, 0.8);
+                ctx.arc(0, 0, 30, 0.8, -0.8, true);
+                ctx.fill();
+                ctx.restore();
+            }
         }
 
         damageNumbers.forEach(d => {
@@ -454,13 +567,15 @@ export class MapRenderer {
             ctx.restore();
         });
 
-        // Base Logic Box (The Main Hub)
-        const bx = 50 * TILE_SIZE + offsetX; const by = 92 * TILE_SIZE + offsetY;
-        ctx.fillStyle = '#0b1a0b'; // Dark Green
-        ctx.fillRect(bx - 40, by - 40, 80, 80);
-        ctx.strokeStyle = '#ffd700'; // Gold
-        ctx.lineWidth = 4; ctx.strokeRect(bx - 40, by - 40, 80, 80);
-        ctx.fillStyle = '#ffd700'; ctx.font = '20px "VT323"'; ctx.textAlign = 'center';
-        ctx.fillText("BASE REBELDE", bx, by - 50);
+        // Base Logic Box (Only for Standard Mode)
+        if (this.mapType !== 'boss_rush') {
+            const bx = 50 * TILE_SIZE + offsetX; const by = 92 * TILE_SIZE + offsetY;
+            ctx.fillStyle = '#0b1a0b'; // Dark Green
+            ctx.fillRect(bx - 40, by - 40, 80, 80);
+            ctx.strokeStyle = '#ffd700'; // Gold
+            ctx.lineWidth = 4; ctx.strokeRect(bx - 40, by - 40, 80, 80);
+            ctx.fillStyle = '#ffd700'; ctx.font = '20px "VT323"'; ctx.textAlign = 'center';
+            ctx.fillText("BASE REBELDE", bx, by - 50);
+        }
     }
 }

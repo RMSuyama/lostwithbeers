@@ -1,33 +1,50 @@
 export const CHAMPION_SKINS = {
     // Zelda: Link to the Past style drawer
-    drawSailor: (ctx, x, y, anim, color, angle, gearType, assets = null, isMoving = true) => {
+    drawSailor: (ctx, x, y, anim, color, angle, gearType, assets = null, isMoving = true, isAttacking = false) => {
         const dir = (Math.round(angle / (Math.PI / 4)) + 8) % 8;
 
-        // If JACA and assets are provided, use custom spritesheet
-        if (gearType === 'jaca' && assets?.sprite?.complete) {
-            // Idle Frame Lock: If not moving, stay on middle frame (1). If moving, cycle 0-2.
-            const frame = isMoving ? (Math.floor(anim * 4) % 3) : 1;
+        // If assets are provided and the specific champion sprite is loaded, use it
+        if (assets && assets[gearType]?.sprite?.complete && assets[gearType].sprite.naturalWidth > 0) {
+            const sprite = assets[gearType].sprite;
+
+            // Expected Layout: 3 Columns (Anim), 4 Rows Walk, 4 Rows Attack
+            // Animation Frame:
+            // Walk: 3 frames (cycle 0, 1, 2)
+            // Attack: 3 frames (cycle 0, 1, 2)
+            const frameCount = 3;
+            const frame = isAttacking ? (Math.floor(anim * 10) % frameCount) : (isMoving ? (Math.floor(anim * 4) % frameCount) : 1);
 
             // Map 8-way dir to 4-way rows (0: Up/Back, 1: Down/Front, 2: Left, 3: Right)
-            let row = 1; // S
-            if (dir === 6 || dir === 5 || dir === 7) row = 0; // N
-            else if (dir === 4 || dir === 3) row = 2; // W
-            else if (dir === 0 || dir === 1) row = 3; // E
+            let row = 1; // Front (South)
+            if (dir === 6 || dir === 5 || dir === 7) row = 0; // Back (North)
+            else if (dir === 4 || dir === 3) row = 2; // Left (West)
+            else if (dir === 0 || dir === 1) row = 3; // Right (East)
+
+            // If attacking, skip to attack rows (4-7)
+            if (isAttacking) row += 4;
 
             ctx.save();
             ctx.translate(x, y);
-            // Draw shadow first
+
+            // Shadow
             ctx.fillStyle = 'rgba(0,0,0,0.3)';
             ctx.beginPath(); ctx.ellipse(0, 15, 20, 8, 0, 0, Math.PI * 2); ctx.fill();
 
-            // Slicing Jaca Sprite - Reduced scale significantly per user request
-            const sw = assets.sprite.width / 3;
-            const sh = assets.sprite.height / 4;
-            const scale = 0.35;
+            // Sprite Drawing
+            const cols = 3;
+            const rows = (sprite.height / sprite.width > 2.0) ? 8 : 4; // Detect 3x4 vs 3x8 based on aspect ratio
+            const sw = sprite.width / cols;
+            const sh = sprite.height / rows;
+
+            // Scale: Standardize to a fixed world height (e.g., 64px)
+            const targetHeight = 64;
+            const worldScale = targetHeight / sh;
+            const targetWidth = sw * worldScale;
+
             ctx.drawImage(
-                assets.sprite,
+                sprite,
                 frame * sw, row * sh, sw, sh,
-                -(sw * scale) / 2, -(sh * scale) + 5, sw * scale, sh * scale
+                -targetWidth / 2, -targetHeight + 20, targetWidth, targetHeight
             );
             ctx.restore();
             return;
@@ -134,64 +151,79 @@ export const CHAMPION_SKINS = {
     djox: (ctx, x, y, anim, color, angle, assets, isMoving = true) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'djox', assets, isMoving),
     klebao: (ctx, x, y, anim, color, angle, assets, isMoving = true) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'klebao', assets, isMoving),
     shiryu: (ctx, x, y, anim, color, angle, assets, isMoving = true) => {
-        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets, isMoving);
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.strokeStyle = '#059669'; ctx.lineWidth = 2;
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath(); ctx.arc(0, -10, 35, 0, Math.PI * 2); ctx.stroke();
-        ctx.restore();
-    },
-    charles: (ctx, x, y, anim, color, angle, assets, isMoving = true) => {
-        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets, isMoving);
-        ctx.fillStyle = '#451a03'; // Wooden Drum
-        ctx.fillRect(x + 18, y - 5, 12, 18);
-        ctx.fillStyle = '#92400e';
-        ctx.fillRect(x + 18, y - 5, 12, 3);
-    },
-    poisoncraft: (ctx, x, y, anim, color, angle, assets, isMoving = true) => {
-        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets, isMoving);
-        ctx.save(); ctx.translate(x, y);
-        ctx.strokeStyle = '#4d7c0f'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.arc(0, -10, 32 + Math.sin(anim * 5) * 2, 0, Math.PI * 2); ctx.stroke();
-        ctx.restore();
-    },
-    foxz: (ctx, x, y, anim, color, angle, assets, isMoving = true) => {
-        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets, isMoving);
-        ctx.save(); ctx.translate(x, y);
-        ctx.fillStyle = 'rgba(126, 34, 206, 0.2)';
-        ctx.beginPath(); ctx.arc(0, -10, 30, 0, Math.PI * 2); ctx.fill();
-        ctx.restore();
-    },
-    peixe: (ctx, x, y, anim, color, angle, assets, isMoving = true) => {
-        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets, isMoving);
-        ctx.save(); ctx.translate(x, y);
-        ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(-15, -45); ctx.lineTo(15, -45);
-        ctx.moveTo(0, -60); ctx.lineTo(0, -30); ctx.stroke(); // Holy Cross/Star
-        ctx.restore();
-    },
-    dan: (ctx, x, y, anim, color, angle, assets, isMoving = true) => {
-        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets, isMoving);
-        ctx.save(); ctx.translate(x, y);
-        ctx.fillStyle = '#16a34a'; // Leaves
-        const rot = anim * 2;
-        for (let i = 0; i < 3; i++) {
+        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'shiryu', assets, isMoving);
+        // Only draw extra effects if NO sprite is loaded
+        if (!assets || !assets['shiryu']?.sprite?.complete) {
             ctx.save();
-            ctx.rotate(rot + (i * Math.PI * 2 / 3));
-            ctx.fillRect(25, 0, 8, 4);
+            ctx.translate(x, y);
+            ctx.strokeStyle = '#059669'; ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath(); ctx.arc(0, -10, 35, 0, Math.PI * 2); ctx.stroke();
             ctx.restore();
         }
-        ctx.restore();
+    },
+    charles: (ctx, x, y, anim, color, angle, assets, isMoving = true) => {
+        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'charles', assets, isMoving);
+        if (!assets || !assets['charles']?.sprite?.complete) {
+            ctx.fillStyle = '#451a03'; // Wooden Drum
+            ctx.fillRect(x + 18, y - 5, 12, 18);
+            ctx.fillStyle = '#92400e';
+            ctx.fillRect(x + 18, y - 5, 12, 3);
+        }
+    },
+    poisoncraft: (ctx, x, y, anim, color, angle, assets, isMoving = true) => {
+        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'poisoncraft', assets, isMoving);
+        if (!assets || !assets['poisoncraft']?.sprite?.complete) {
+            ctx.save(); ctx.translate(x, y);
+            ctx.strokeStyle = '#4d7c0f'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.arc(0, -10, 32 + Math.sin(anim * 5) * 2, 0, Math.PI * 2); ctx.stroke();
+            ctx.restore();
+        }
+    },
+    foxz: (ctx, x, y, anim, color, angle, assets, isMoving = true) => {
+        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'foxz', assets, isMoving);
+        if (!assets || !assets['foxz']?.sprite?.complete) {
+            ctx.save(); ctx.translate(x, y);
+            ctx.fillStyle = 'rgba(126, 34, 206, 0.2)';
+            ctx.beginPath(); ctx.arc(0, -10, 30, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        }
+    },
+    peixe: (ctx, x, y, anim, color, angle, assets, isMoving = true) => {
+        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'peixe', assets, isMoving);
+        if (!assets || !assets['peixe']?.sprite?.complete) {
+            ctx.save(); ctx.translate(x, y);
+            ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(-15, -45); ctx.lineTo(15, -45);
+            ctx.moveTo(0, -60); ctx.lineTo(0, -30); ctx.stroke(); // Holy Cross/Star
+            ctx.restore();
+        }
+    },
+    dan: (ctx, x, y, anim, color, angle, assets, isMoving = true) => {
+        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'dan', assets, isMoving);
+        if (!assets || !assets['dan']?.sprite?.complete) {
+            ctx.save(); ctx.translate(x, y);
+            ctx.fillStyle = '#16a34a'; // Leaves
+            const rot = anim * 2;
+            for (let i = 0; i < 3; i++) {
+                ctx.save();
+                ctx.rotate(rot + (i * Math.PI * 2 / 3));
+                ctx.fillRect(25, 0, 8, 4);
+                ctx.restore();
+            }
+            ctx.restore();
+        }
     },
     huntskan: (ctx, x, y, anim, color, angle, assets, isMoving = true) => {
-        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets, isMoving);
-        ctx.save(); ctx.translate(x, y);
-        ctx.strokeStyle = '#0f766e'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(0, 15, 25, 0, Math.PI); ctx.stroke(); // Water Ripple
-        ctx.restore();
+        CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, 'huntskan', assets, isMoving);
+        if (!assets || !assets['huntskan']?.sprite?.complete) {
+            ctx.save(); ctx.translate(x, y);
+            ctx.strokeStyle = '#0f766e'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(0, 15, 25, 0, Math.PI); ctx.stroke(); // Water Ripple
+            ctx.restore();
+        }
     },
-    default: (ctx, x, y, anim, color, angle, assets, isMoving = true) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, null, assets, isMoving)
+    default: (ctx, x, y, anim, color, angle, assets, isMoving = true, championId = null) => CHAMPION_SKINS.drawSailor(ctx, x, y, anim, color, angle, championId, assets, isMoving)
 };
 
 CHAMPION_SKINS.shiryusuyama = CHAMPION_SKINS.shiryu;

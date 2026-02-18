@@ -1,4 +1,5 @@
-const GameState = require('./game');
+// GameState imported dynamically now
+// const GameState = require('./game');
 const { v4: uuidv4 } = require('uuid');
 const supabase = require('./supabaseClient');
 
@@ -8,16 +9,34 @@ class RoomManager {
         this.rooms = {}; // { roomId: { gameState, interval } }
     }
 
-    createRoom() {
-        const roomId = uuidv4().substring(0, 6);
-        const gameState = new GameState(roomId);
+    async createRoom(id, gameMode = 'standard') {
+        const roomId = id || uuidv4().substring(0, 6);
+
+        let gameState;
+        if (gameMode === 'boss_rush') {
+            const BossColosseumGame = require('./BossColosseumGame');
+            gameState = new BossColosseumGame(roomId);
+            console.log(`[RoomManager] Created Boss Rush room: ${roomId}`);
+        } else {
+            const StandardGame = require('./StandardGame');
+            gameState = new StandardGame(roomId);
+            console.log(`[RoomManager] Created Standard room: ${roomId}`);
+        }
 
         this.rooms[roomId] = {
             gameState,
-            interval: null
+            interval: null,
+            started: false,
+            mode: gameMode
         };
 
-        this.startGameLoop(roomId);
+        // Update mode in Supabase if room exists (or create if needed - though usually created by client)
+        // For now, valid since client creates room record first usually.
+
+
+
+
+
         return roomId;
     }
 
@@ -25,32 +44,43 @@ class RoomManager {
         // Validate room status in Supabase
         const { data: roomData, error: roomError } = await supabase
             .from('rooms')
-            .select('status')
+            .select('status, game_mode')
             .eq('id', roomId)
             .single();
 
         if (roomError || !roomData) {
-            console.log(`Room ${roomId} not found in database`);
-            return socket.emit('error', 'Sala não encontrada');
+            console.error(`[RoomManager] Room ${roomId} lookup error or not found in DB. Error:`, roomError);
+            // If it's already in memory, we might still want to join (resilience)
+            if (!this.rooms[roomId]) {
+                return socket.emit('error', 'Sala não encontrada no banco de dados');
+            }
         }
 
-        if (roomData.status === 'in_progress') {
-            console.log(`Room ${roomId} is in progress, blocking join`);
-            return socket.emit('error', 'Partida em andamento! Aguarde a próxima rodada.');
+        if (roomData?.status === 'playing' && !this.rooms[roomId]) {
+            console.log(`[RoomManager] Room ${roomId} is playing and missing from memory.`);
+            // Auto-recovery: if playing in DB but missing in memory, we should initialize
+            const mode = roomData?.game_mode || 'standard';
+            await this.createRoom(roomId, mode);
         }
 
-        if (this.rooms[roomId]) {
-            socket.join(roomId);
-            // Associate socket.id with userId for cleanup
-            this.rooms[roomId].gameState.addPlayer(socket.id, userId);
-
-            // Notify client
-            socket.emit('room_joined', { roomId, playerId: socket.id });
-
-            console.log(`Socket ${socket.id} (User: ${userId}) joined room ${roomId}`);
-        } else {
-            socket.emit('error', 'Room not found');
+        if (!this.rooms[roomId]) {
+            console.log(`[RoomManager] Initializing room ${roomId} on join attempt.`);
+            const mode = roomData?.game_mode || 'standard'; // Ensure client sets this column
+            await this.createRoom(roomId, mode);
         }
+
+        socket.join(roomId);
+        // Associate socket.id with userId for cleanup
+        this.rooms[roomId].gameState.addPlayer(socket.id, userId);
+
+        // Notify client
+        socket.emit('room_joined', {
+            roomId,
+            playerId: socket.id,
+            gameMode: this.rooms[roomId].mode || 'standard'
+        });
+
+        console.log(`Socket ${socket.id} (User: ${userId}) joined room ${roomId}`);
     }
 
     async handleDisconnect(socket) {
@@ -83,23 +113,47 @@ class RoomManager {
         }
     }
 
-    async startGameLoop(roomId) {
-        if (!this.rooms[roomId]) return;
+    handleWaveControl(socket, data) {
+        const { roomId, type } = data;
+        if (this.rooms[roomId]) {
+            const gs = this.rooms[roomId].gameState;
+            if (type === 'skip_wave') gs.skipWave();
+            if (type === 'spawn_all') gs.spawnInstant();
+        }
+    }
 
-        // Update room status to in_progress in Supabase
+    async startGameLoop(roomId) {
+        // Ensure room exists in memory
+        // Ensure room exists in memory
+        if (!this.rooms[roomId]) {
+            console.log(`[RoomManager] Initializing room ${roomId} on demand for game loop.`);
+            // Retrieve mode from DB
+            const { data } = await supabase.from('rooms').select('game_mode').eq('id', roomId).single();
+            const mode = data?.game_mode || 'standard';
+            await this.createRoom(roomId, mode);
+        }
+
+        if (this.rooms[roomId].started) return;
+        this.rooms[roomId].started = true;
+
+        // Update room status to playing in Supabase
         await supabase
             .from('rooms')
-            .update({ status: 'in_progress' })
+            .update({ status: 'playing' })
             .eq('id', roomId);
 
-        console.log(`Room ${roomId} status updated to in_progress`);
+        console.log(`Room ${roomId} status updated to playing`);
 
         // 60 TPS
         this.rooms[roomId].interval = setInterval(() => {
-            const room = this.rooms[roomId];
-            if (room) {
-                room.gameState.update();
-                this.io.to(roomId).emit('game_state', room.gameState.getState());
+            try {
+                const room = this.rooms[roomId];
+                if (room) {
+                    room.gameState.update();
+                    this.io.to(roomId).emit('game_state', room.gameState.getState());
+                }
+            } catch (err) {
+                console.error(`[RoomManager] CRITICAL ERROR in loop for room ${roomId}:`, err);
             }
         }, 1000 / 60);
     }

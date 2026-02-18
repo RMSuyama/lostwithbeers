@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -30,6 +31,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('join_room', (data) => {
+        console.log('[SOCKET] Received join_room data:', data);
         const roomId = typeof data === 'object' ? data.roomId : data;
         const userId = typeof data === 'object' ? data.userId : null;
         roomManager.joinRoom(socket, roomId, userId);
@@ -37,6 +39,16 @@ io.on('connection', (socket) => {
 
     socket.on('player_input', (data) => {
         roomManager.handleInput(socket, data);
+    });
+
+    socket.on('start_game', (data) => {
+        const roomId = typeof data === 'object' ? data.roomId : data;
+        console.log(`[SOCKET] Received start_game for Room: ${roomId}`);
+        roomManager.startGameLoop(roomId);
+    });
+
+    socket.on('wave_control', (data) => {
+        roomManager.handleWaveControl(socket, data);
     });
 
     socket.on('disconnect', () => {

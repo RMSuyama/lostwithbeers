@@ -101,7 +101,7 @@ export const useLobby = (user, playerName) => {
         return false;
     };
 
-    const createRoom = async () => {
+    const createRoom = async (gameMode = 'standard') => {
         if (!playerName?.trim()) return showAlert('Herói, identifique-se antes de iniciar sua jornada!');
         if (await checkAlreadyInRoom()) return;
 
@@ -116,7 +116,8 @@ export const useLobby = (user, playerName) => {
                 .from('rooms')
                 .insert([{
                     name: roomName.trim(),
-                    status: 'waiting'
+                    status: 'waiting',
+                    game_mode: gameMode
                 }])
                 .select();
 

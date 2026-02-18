@@ -8,10 +8,12 @@ export class ControlsSystem {
 
     setupListeners() {
         window.addEventListener('keydown', (e) => {
+            if (!e || !e.key) return; // Safety check
             this.keys[e.key.toLowerCase()] = true;
         });
 
         window.addEventListener('keyup', (e) => {
+            if (!e || !e.key) return; // Safety check
             this.keys[e.key.toLowerCase()] = false;
         });
 

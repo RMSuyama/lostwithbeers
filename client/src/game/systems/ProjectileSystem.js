@@ -5,6 +5,13 @@ export class ProjectileSystem {
     }
 
     spawn(config) {
+        // PERFORMANCE: Cap max projectiles
+        if (this.projectiles.length >= 100) {
+            // Remove oldest projectile
+            const oldest = this.projectiles.shift();
+            if (this.performanceSystem) this.performanceSystem.release('projectiles', oldest);
+        }
+
         const factory = () => ({
             id: '', x: 0, y: 0, vx: 0, vy: 0,
             type: 'linear', ownerId: '',

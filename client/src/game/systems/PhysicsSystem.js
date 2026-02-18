@@ -56,27 +56,33 @@ export class PhysicsSystem {
     /**
      * Simple circle collision to prevent stacking
      */
-    static resolveEntityCollision(entity, others, radius = 25) {
-        others.forEach(other => {
-            if (entity.id === other.id) return;
+    static resolveEntityCollision(entity, entities, pushDistance = 20) {
+        // PERFORMANCE: Only do 1 iteration instead of 2
+        for (let p = 0; p < 1; p++) {
+            for (const other of entities) {
+                if (entity === other || entity.id === other.id) continue;
 
-            const dx = entity.x - other.x;
-            const dy = entity.y - other.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            const minDist = radius * 2;
+                const dx = other.x - entity.x;
+                const dy = other.y - entity.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
 
-            if (dist < minDist && dist > 0) {
-                // Push away
-                const overlap = minDist - dist;
-                const nx = dx / dist;
-                const ny = dy / dist;
+                // PERFORMANCE: Skip if too far away
+                if (dist > pushDistance * 3) continue;
 
-                entity.x += nx * overlap * 0.5;
-                entity.y += ny * overlap * 0.5;
+                if (dist < pushDistance && dist > 0) {
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    const offset = (pushDistance - dist) / 2;
+                    entity.x -= nx * offset;
+                    entity.y -= ny * offset;
+                    if (other.x !== undefined) {
+                        other.x += nx * offset;
+                        other.y += ny * offset;
+                    }
+                }
             }
-        });
+        }
     }
-
     /**
      * Forces an entity to stay within map bounds
      */
