@@ -22,7 +22,7 @@ import { ControlsSystem } from './systems/ControlsSystem';
 import { Sword, Zap, Shield, Play } from 'lucide-react';
 import MobileControls from '../components/MobileControls';
 import VoiceChat from '../components/VoiceChat';
-import { Settings, Maximize, Music, Mic, MicOff } from 'lucide-react';
+import { Settings, Maximize, Music, Mic, MicOff, ShoppingBag } from 'lucide-react';
 const MAX_LEVEL = 30;
 
 const LERP_FACTOR = 0.1;

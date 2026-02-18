@@ -264,9 +264,14 @@ class GameState {
             }
         }
 
-        const speed = 250 * speedMultiplier;
+        const speed = 250 * speedMultiplier * (p.speedMultiplier || 1);
         let inputX = p.input.vector?.x || 0;
         let inputY = p.input.vector?.y || 0;
+
+        // HP REGEN
+        if (p.hpRegen && p.hp < p.maxHp) {
+            p.hp = Math.min(p.maxHp, p.hp + p.hpRegen * dt);
+        }
 
         // Execute intended skills (if not casting)
         if (!p.casting) {
