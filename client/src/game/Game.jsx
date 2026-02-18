@@ -883,9 +883,7 @@ const Game = ({ roomId, playerName, championId, initialGameMode, user, setInGame
                         </div>
                     </div>
                 )}
-                const [showSettings, setShowSettings] = useState(false);
-                const [showShop, setShowShop] = useState(false); // Shop State
-                // ...
+
                 <div style={{ marginTop: '10px', display: 'flex', gap: '10px', justifyContent: 'flex-end', pointerEvents: 'auto' }}>
                     <div style={{ background: 'rgba(0,0,0,0.6)', border: '2px solid #ffd700', color: '#ffd700', padding: '5px 10px', borderRadius: '4px', fontSize: '0.9rem' }}>
                         CONTROLES: {settings.controlMode === 'arrows' ? 'SETAS + QWER' : 'WASD + 1234'}
